@@ -211,6 +211,8 @@ function ConferenciaPage() {
         {/* Thermometer chart */}
         <MonthThermometer entradas={totals.entradas} saidas={totals.saidas} />
 
+        <YearLineChart data={yearTotals} currentMonth={month} year={year} />
+
 
         {/* Add buttons */}
         <div className="mt-6 flex flex-wrap justify-end gap-3">
