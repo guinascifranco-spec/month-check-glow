@@ -9,7 +9,9 @@ import {
   addRow,
   updateRow,
   deleteRow,
+  getYearTotals,
 } from "@/lib/month-check.functions";
+
 
 export const Route = createFileRoute("/_authenticated/conferencia")({
   head: () => ({
@@ -47,16 +49,30 @@ function ConferenciaPage() {
   const addRowFn = useServerFn(addRow);
   const updateRowFn = useServerFn(updateRow);
   const deleteRowFn = useServerFn(deleteRow);
+  const fetchYearTotals = useServerFn(getYearTotals);
 
   const queryKey = ["month-rows", year, month] as const;
+  const yearKey = ["year-totals", year] as const;
   const { data: rows = [], isLoading } = useQuery({
     queryKey,
     queryFn: () => fetchRows({ data: { year, month } }) as Promise<Row[]>,
   });
+  const { data: yearTotals = [] } = useQuery({
+    queryKey: yearKey,
+    queryFn: () =>
+      fetchYearTotals({ data: { year } }) as Promise<
+        Array<{ month: number; entradas: number; saidas: number }>
+      >,
+  });
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey });
+    queryClient.invalidateQueries({ queryKey: yearKey });
+  };
 
   const addMutation = useMutation({
     mutationFn: (tipo: "entrada" | "saida") => addRowFn({ data: { year, month, tipo } }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: invalidateAll,
   });
 
   const deleteMutation = useMutation({
@@ -70,7 +86,7 @@ function ConferenciaPage() {
     onError: (_e, _id, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(queryKey, ctx.prev);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey }),
+    onSettled: invalidateAll,
   });
 
   const updateMutation = useMutation({
@@ -87,7 +103,9 @@ function ConferenciaPage() {
     onError: (_e, _p, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(queryKey, ctx.prev);
     },
+    onSettled: invalidateAll,
   });
+
 
   const totals = useMemo(() => {
     let entradas = 0, saidas = 0;
@@ -193,6 +211,8 @@ function ConferenciaPage() {
         {/* Thermometer chart */}
         <MonthThermometer entradas={totals.entradas} saidas={totals.saidas} />
 
+        <YearLineChart data={yearTotals} currentMonth={month} year={year} />
+
 
         {/* Add buttons */}
         <div className="mt-6 flex flex-wrap justify-end gap-3">
@@ -293,6 +313,169 @@ function MonthThermometer({ entradas, saidas }: { entradas: number; saidas: numb
     </div>
   );
 }
+
+type MonthTotal = { month: number; entradas: number; saidas: number };
+
+const MES_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+function YearLineChart({
+  data,
+  currentMonth,
+  year,
+}: {
+  data: MonthTotal[];
+  currentMonth: number;
+  year: number;
+}) {
+  const points = data.length === 12
+    ? data
+    : Array.from({ length: 12 }, (_, i) => ({ month: i + 1, entradas: 0, saidas: 0 }));
+
+  const max = Math.max(
+    1,
+    ...points.map((p) => Math.max(p.entradas, p.saidas)),
+  );
+
+  // SVG geometry
+  const W = 720;
+  const H = 260;
+  const padL = 56;
+  const padR = 16;
+  const padT = 16;
+  const padB = 32;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+  const stepX = innerW / 11;
+
+  const x = (i: number) => padL + stepX * i;
+  const y = (v: number) => padT + innerH - (v / max) * innerH;
+
+  const pathFor = (key: "entradas" | "saidas") =>
+    points.map((p, i) => `${i === 0 ? "M" : "L"} ${x(i).toFixed(2)} ${y(p[key]).toFixed(2)}`).join(" ");
+
+  const areaFor = (key: "entradas" | "saidas") =>
+    `${pathFor(key)} L ${x(11).toFixed(2)} ${(padT + innerH).toFixed(2)} L ${x(0).toFixed(2)} ${(padT + innerH).toFixed(2)} Z`;
+
+  // 4 gridlines
+  const gridVals = [0, 0.25, 0.5, 0.75, 1].map((f) => f * max);
+
+  const fmtCompact = (n: number) => {
+    if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
+    return n.toFixed(0);
+  };
+
+  const totalEntradas = points.reduce((s, p) => s + p.entradas, 0);
+  const totalSaidas = points.reduce((s, p) => s + p.saidas, 0);
+
+  return (
+    <div className="neu-raised mt-6 rounded-2xl p-6" aria-label={`Gráfico anual de entradas e saídas em ${year}`}>
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Visão anual {year}
+          </div>
+          <div className="mt-1 text-sm text-muted-foreground">
+            Entradas vs saídas por mês
+          </div>
+        </div>
+        <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "var(--color-primary)" }} />
+            <span className="font-medium text-muted-foreground">Entradas</span>
+            <span className="font-semibold tabular-nums" style={{ color: "var(--color-primary)" }}>
+              {brl.format(totalEntradas)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "var(--color-danger)" }} />
+            <span className="font-medium text-muted-foreground">Saídas</span>
+            <span className="font-semibold tabular-nums" style={{ color: "var(--color-danger)" }}>
+              {brl.format(totalSaidas)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="w-full overflow-hidden">
+        <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img">
+          <title>Entradas e saídas por mês em {year}</title>
+
+          {/* Gridlines + Y labels */}
+          {gridVals.map((v, i) => {
+            const yy = y(v);
+            return (
+              <g key={i}>
+                <line
+                  x1={padL} x2={W - padR} y1={yy} y2={yy}
+                  stroke="currentColor"
+                  className="text-foreground/10"
+                  strokeWidth={1}
+                />
+                <text
+                  x={padL - 8} y={yy + 3}
+                  textAnchor="end"
+                  className="fill-muted-foreground"
+                  style={{ fontSize: 10 }}
+                >
+                  {fmtCompact(v)}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Current month highlight */}
+          <line
+            x1={x(currentMonth - 1)} x2={x(currentMonth - 1)}
+            y1={padT} y2={padT + innerH}
+            stroke="currentColor"
+            className="text-primary/30"
+            strokeWidth={1}
+            strokeDasharray="3 3"
+          />
+
+          {/* Areas */}
+          <path d={areaFor("entradas")} fill="var(--color-primary)" opacity={0.12} />
+          <path d={areaFor("saidas")} fill="var(--color-danger)" opacity={0.12} />
+
+          {/* Lines */}
+          <path d={pathFor("entradas")} fill="none" stroke="var(--color-primary)" strokeWidth={2.5}
+                strokeLinecap="round" strokeLinejoin="round" />
+          <path d={pathFor("saidas")} fill="none" stroke="var(--color-danger)" strokeWidth={2.5}
+                strokeLinecap="round" strokeLinejoin="round" />
+
+          {/* Points + X labels */}
+          {points.map((p, i) => {
+            const isCurrent = p.month === currentMonth;
+            return (
+              <g key={i}>
+                <circle cx={x(i)} cy={y(p.entradas)} r={isCurrent ? 4 : 3}
+                        fill="var(--color-background)"
+                        stroke="var(--color-primary)" strokeWidth={2}>
+                  <title>{`${MES_ABBR[i]} — Entradas: ${brl.format(p.entradas)}`}</title>
+                </circle>
+                <circle cx={x(i)} cy={y(p.saidas)} r={isCurrent ? 4 : 3}
+                        fill="var(--color-background)"
+                        stroke="var(--color-danger)" strokeWidth={2}>
+                  <title>{`${MES_ABBR[i]} — Saídas: ${brl.format(p.saidas)}`}</title>
+                </circle>
+                <text
+                  x={x(i)} y={H - 10}
+                  textAnchor="middle"
+                  className={isCurrent ? "fill-foreground font-semibold" : "fill-muted-foreground"}
+                  style={{ fontSize: 11 }}
+                >
+                  {MES_ABBR[i]}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+
 
 
 function RowItem({

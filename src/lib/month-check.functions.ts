@@ -144,3 +144,33 @@ export const deleteRow = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const getYearTotals = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { year: number }) =>
+    z.object({ year: z.number().int().min(1970).max(3000) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: rows, error } = await supabase
+      .from("month_check_rows")
+      .select("month, tipo, valor")
+      .eq("user_id", userId)
+      .eq("year", data.year);
+    if (error) throw new Error(error.message);
+
+    const totals = Array.from({ length: 12 }, (_, i) => ({
+      month: i + 1,
+      entradas: 0,
+      saidas: 0,
+    }));
+    for (const r of rows ?? []) {
+      const idx = (r.month as number) - 1;
+      if (idx < 0 || idx > 11) continue;
+      const v = Number(r.valor) || 0;
+      if (r.tipo === "entrada") totals[idx].entradas += v;
+      else totals[idx].saidas += v;
+    }
+    return totals;
+  });
+
