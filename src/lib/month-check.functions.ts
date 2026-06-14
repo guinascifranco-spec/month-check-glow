@@ -117,7 +117,7 @@ export const updateRow = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const patch: Record<string, unknown> = {};
+    const patch: { descricao?: string; tipo?: "entrada" | "saida"; valor?: number } = {};
     if (data.descricao !== undefined) patch.descricao = data.descricao;
     if (data.tipo !== undefined) patch.tipo = data.tipo;
     if (data.valor !== undefined) patch.valor = data.valor;
