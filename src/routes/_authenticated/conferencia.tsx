@@ -9,7 +9,9 @@ import {
   addRow,
   updateRow,
   deleteRow,
+  getYearTotals,
 } from "@/lib/month-check.functions";
+
 
 export const Route = createFileRoute("/_authenticated/conferencia")({
   head: () => ({
