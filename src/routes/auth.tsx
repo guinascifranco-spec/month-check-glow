@@ -29,6 +29,22 @@ function AuthPage() {
     });
   }, [navigate]);
 
+  async function handleGoogleSignIn() {
+    setLoading(true); setError(null);
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin + "/conferencia",
+      });
+      if (result.error) throw result.error;
+      if (!result.redirected) {
+        navigate({ to: "/conferencia" });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao entrar com Google");
+      setLoading(false);
+    }
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setLoading(true); setError(null); setInfo(null);
