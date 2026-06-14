@@ -49,16 +49,30 @@ function ConferenciaPage() {
   const addRowFn = useServerFn(addRow);
   const updateRowFn = useServerFn(updateRow);
   const deleteRowFn = useServerFn(deleteRow);
+  const fetchYearTotals = useServerFn(getYearTotals);
 
   const queryKey = ["month-rows", year, month] as const;
+  const yearKey = ["year-totals", year] as const;
   const { data: rows = [], isLoading } = useQuery({
     queryKey,
     queryFn: () => fetchRows({ data: { year, month } }) as Promise<Row[]>,
   });
+  const { data: yearTotals = [] } = useQuery({
+    queryKey: yearKey,
+    queryFn: () =>
+      fetchYearTotals({ data: { year } }) as Promise<
+        Array<{ month: number; entradas: number; saidas: number }>
+      >,
+  });
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey });
+    queryClient.invalidateQueries({ queryKey: yearKey });
+  };
 
   const addMutation = useMutation({
     mutationFn: (tipo: "entrada" | "saida") => addRowFn({ data: { year, month, tipo } }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey }),
+    onSuccess: invalidateAll,
   });
 
   const deleteMutation = useMutation({
@@ -72,7 +86,7 @@ function ConferenciaPage() {
     onError: (_e, _id, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(queryKey, ctx.prev);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey }),
+    onSettled: invalidateAll,
   });
 
   const updateMutation = useMutation({
@@ -89,7 +103,9 @@ function ConferenciaPage() {
     onError: (_e, _p, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(queryKey, ctx.prev);
     },
+    onSettled: invalidateAll,
   });
+
 
   const totals = useMemo(() => {
     let entradas = 0, saidas = 0;
