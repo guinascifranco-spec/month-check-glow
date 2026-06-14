@@ -190,6 +190,10 @@ function ConferenciaPage() {
           </div>
         </div>
 
+        {/* Thermometer chart */}
+        <MonthThermometer entradas={totals.entradas} saidas={totals.saidas} />
+
+
         {/* Add buttons */}
         <div className="mt-6 flex flex-wrap justify-end gap-3">
           <button
