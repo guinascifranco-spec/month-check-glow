@@ -1,24 +1,22 @@
-## Gráfico termômetro mensal (saídas vs entradas)
+## Gráfico de linhas anual (entradas × saídas por mês)
 
-### O que será feito
-1. **Novo componente reutilizável** `MonthThermometer`:
-   - Recebe os totais de entradas e saídas do mês.
-   - Calcula o percentual: `min((saídas / entradas) * 100, 100)` (com proteção contra divisão por zero).
-   - Exibe uma barra de progresso estilo bullet chart / termômetro com fundo `neu-inset` e preenchimento em cor `danger` que avança da esquerda para a direita.
-   - Mostra o percentual numeramente ao lado ou sobre a barra, com label "Saídas / Entradas".
-   - Mantém o visual limpo e consistente com o neumorfismo já presente (sombras, bordas arredondadas, paleta do tema).
+1. **Novo server function** `getYearTotals` em `src/lib/month-check.functions.ts`:
+   - Recebe `{ year }`, autenticado via `requireSupabaseAuth`.
+   - Lê todas as linhas do usuário no ano em uma única query.
+   - Retorna array de 12 itens `{ month, entradas, saidas }` (zeros para meses sem dados).
 
-2. **Integração na página** `src/routes/_authenticated/conferencia.tsx`:
-   - Inserir o componente **dentro do card da tabela**, abaixo do `<tbody>` e antes do fechamento do wrapper da tabela (ou logo após a tabela, antes dos botões de adicionar), conforme solicitado — "abaixo das linhas de lançamentos".
-   - Alimentar com os `totals.entradas` e `totals.saidas` já calculados via `useMemo`.
+2. **Novo componente** `YearLineChart` em `src/routes/_authenticated/conferencia.tsx`:
+   - SVG puro (sem libs), responsivo via `viewBox`.
+   - Duas linhas suaves: entradas (`--color-primary`) e saídas (`--color-danger`).
+   - Áreas com baixa opacidade abaixo de cada linha; pontos por mês; mês atual destacado.
+   - Eixo X com rótulos `Jan…Dez`; eixo Y escalado pelo maior valor do ano.
+   - Tooltip simples (título nativo do SVG) por mês com valores em BRL.
+   - Card `neu-raised`, legenda compacta no topo.
 
-### Não será alterado
-- Nenhuma lógica de backend ou banco de dados.
-- Nenhum pacote adicional (o gráfico é feito com CSS/Tailwind puro).
-- A tabela de lançamentos permanece igual.
+3. **Integração**:
+   - `useQuery` com key `["year-totals", year]` consumindo `getYearTotals`.
+   - Renderizado abaixo do termômetro, visível em qualquer mês.
+   - Invalidar `["year-totals", year]` nos `onSuccess` de `addMutation`, `updateMutation` e `deleteMutation` para refletir edições em tempo real.
 
-### Detalhes técnicos
-- As cores usarão os tokens semânticos do projeto: `text-primary`/`bg-primary` para entradas e `text-danger`/`bg-danger` para saídas.
-- A barra terá largura total, altura confortável (~20–24 px), bordas arredondadas (`rounded-full`), sombra interna no fundo e sombra externa sutil no preenchimento.
-- Se entradas = 0, a barra permanece vazia e exibe "—" ou "0%".
-- O componente pode ser definido no próprio arquivo da rota ou em `src/components/` se preferir isolamento.
+### Não muda
+- Schema/banco/RLS, template padrão, termômetro existente, nenhum pacote novo.
