@@ -190,6 +190,10 @@ function ConferenciaPage() {
           </div>
         </div>
 
+        {/* Thermometer chart */}
+        <MonthThermometer entradas={totals.entradas} saidas={totals.saidas} />
+
+
         {/* Add buttons */}
         <div className="mt-6 flex flex-wrap justify-end gap-3">
           <button
@@ -221,6 +225,75 @@ function SummaryCard({
     </div>
   );
 }
+
+function MonthThermometer({ entradas, saidas }: { entradas: number; saidas: number }) {
+  const hasEntradas = entradas > 0;
+  const rawPct = hasEntradas ? (saidas / entradas) * 100 : 0;
+  const pct = Math.min(rawPct, 100);
+  const overBudget = rawPct > 100;
+  const restante = entradas - saidas;
+
+  // Color shifts from primary (safe) → amber (warning) → danger (over)
+  let fillColor = "var(--color-primary)";
+  if (rawPct >= 100) fillColor = "var(--color-danger)";
+  else if (rawPct >= 75) fillColor = "oklch(0.78 0.16 75)";
+
+  return (
+    <div className="neu-raised mt-6 rounded-2xl p-6">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Saídas vs Entradas
+          </div>
+          <div className="mt-1 text-sm text-muted-foreground">
+            {hasEntradas
+              ? `${brl.format(saidas)} de ${brl.format(entradas)} comprometidos`
+              : "Adicione uma entrada para visualizar o termômetro"}
+          </div>
+        </div>
+        <div className="text-right">
+          <div
+            className="text-3xl font-bold tabular-nums"
+            style={{ color: hasEntradas ? fillColor : "var(--color-muted-foreground)" }}
+          >
+            {hasEntradas ? `${rawPct.toFixed(0)}%` : "—"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {hasEntradas
+              ? overBudget
+                ? `Excedeu ${brl.format(saidas - entradas)}`
+                : `Resta ${brl.format(restante)}`
+              : "sem dados"}
+          </div>
+        </div>
+      </div>
+
+      {/* Bullet bar */}
+      <div className="neu-inset relative h-6 w-full overflow-hidden rounded-full">
+        {/* tick markers at 50% and 75% */}
+        <div className="pointer-events-none absolute inset-y-0 left-1/2 w-px bg-foreground/10" />
+        <div className="pointer-events-none absolute inset-y-0 left-3/4 w-px bg-foreground/10" />
+        <div
+          className="h-full rounded-full transition-[width,background-color] duration-500 ease-out"
+          style={{
+            width: `${pct}%`,
+            backgroundColor: fillColor,
+            boxShadow: "0 0 12px 0 color-mix(in oklch, currentColor 35%, transparent)",
+            color: fillColor,
+          }}
+        />
+      </div>
+
+      <div className="mt-2 flex justify-between text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <span>0%</span>
+        <span>50%</span>
+        <span>75%</span>
+        <span>100%</span>
+      </div>
+    </div>
+  );
+}
+
 
 function RowItem({
   row, onUpdate, onDelete,
