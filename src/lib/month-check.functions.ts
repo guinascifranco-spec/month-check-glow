@@ -5,18 +5,17 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const DEFAULT_TEMPLATE: Array<{ descricao: string; tipo: "entrada" | "saida" }> = [
   { descricao: "Salário", tipo: "entrada" },
   { descricao: "Adiantamento", tipo: "entrada" },
-  { descricao: "Bolsa Pais", tipo: "entrada" },
-  { descricao: "Mensal Sergio", tipo: "entrada" },
-  { descricao: "Mensal Lucia", tipo: "entrada" },
-  { descricao: "Reembolso família", tipo: "entrada" },
-  { descricao: "A receber", tipo: "entrada" },
+  { descricao: "Acertos Bia", tipo: "entrada" },
+  { descricao: "Demais entradas", tipo: "entrada" },
   { descricao: "Fatura NBK", tipo: "saida" },
-  { descricao: "Fatura C6", tipo: "saida" },
   { descricao: "Aluguel", tipo: "saida" },
   { descricao: "Condomínio", tipo: "saida" },
   { descricao: "Energia", tipo: "saida" },
-  { descricao: "Internet", tipo: "saida" },
-  { descricao: "Água/Gás", tipo: "saida" },
+  { descricao: "Internet e Celular", tipo: "saida" },
+  { descricao: "Água", tipo: "saida" },
+  { descricao: "Gás", tipo: "saida" },
+  { descricao: "Lavanderia", tipo: "saida" },
+  { descricao: "Psicólogo", tipo: "saida" },
 ];
 
 const periodSchema = z.object({
