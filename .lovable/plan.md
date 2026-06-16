@@ -1,22 +1,18 @@
-## Gráfico de linhas anual (entradas × saídas por mês)
+## Adicionar logo do Month Check
 
-1. **Novo server function** `getYearTotals` em `src/lib/month-check.functions.ts`:
-   - Recebe `{ year }`, autenticado via `requireSupabaseAuth`.
-   - Lê todas as linhas do usuário no ano em uma única query.
-   - Retorna array de 12 itens `{ month, entradas, saidas }` (zeros para meses sem dados).
+### Observação importante sobre a imagem
+A imagem fornecida tem **fundo branco sólido** (não transparente). No tema escuro vai aparecer um retângulo branco ao redor do logo. Como upload via Lovable Assets (recomendado para binários), e aplico um dos tratamentos abaixo — me confirme qual prefere, mas vou seguir com a opção **A** por padrão se você só aprovar o plano:
 
-2. **Novo componente** `YearLineChart` em `src/routes/_authenticated/conferencia.tsx`:
-   - SVG puro (sem libs), responsivo via `viewBox`.
-   - Duas linhas suaves: entradas (`--color-primary`) e saídas (`--color-danger`).
-   - Áreas com baixa opacidade abaixo de cada linha; pontos por mês; mês atual destacado.
-   - Eixo X com rótulos `Jan…Dez`; eixo Y escalado pelo maior valor do ano.
-   - Tooltip simples (título nativo do SVG) por mês com valores em BRL.
-   - Card `neu-raised`, legenda compacta no topo.
+- **A (padrão)**: removo o fundo branco via processamento (gerando PNG transparente) antes de subir como asset. Funciona em ambos os temas sem retângulo branco.
+- **B**: mantenho a imagem como está (fundo branco). Fica visível um card branco ao redor do logo no tema escuro.
+- **C**: você envia uma versão PNG com fundo já transparente.
 
-3. **Integração**:
-   - `useQuery` com key `["year-totals", year]` consumindo `getYearTotals`.
-   - Renderizado abaixo do termômetro, visível em qualquer mês.
-   - Invalidar `["year-totals", year]` nos `onSuccess` de `addMutation`, `updateMutation` e `deleteMutation` para refletir edições em tempo real.
+### Passos
+1. **Upload do logo** via `lovable-assets` CLI (não copio binário para `public/` — Lovable usa CDN via `.asset.json`). Salvo o ponteiro em `src/assets/logo.png.asset.json`. Se opção A: gero versão sem fundo em `/tmp` primeiro e subo essa.
+2. **Novo componente** `src/components/logo.tsx` exportando `<Logo />` — `<img>` com `src` do asset, `alt="Month Check"`, `height` fixo (ex.: 32px no header, 56px na auth) e `width: auto` para preservar proporção.
+3. **`src/routes/_authenticated/conferencia.tsx`** (header): substituo o bloco `<h1>Month Check</h1>` + subtítulo por `<Logo />` + subtítulo mantido.
+4. **`src/routes/auth.tsx`**: substituo `<h1>Month Check</h1>` por `<Logo />` centralizado, mantendo o subtítulo.
+5. **`src/routes/__root.tsx`**: adiciono `<link rel="icon">` apontando para o asset (favicon).
 
 ### Não muda
-- Schema/banco/RLS, template padrão, termômetro existente, nenhum pacote novo.
+- Schema/banco, server functions, lógica de auth, tema/cores.

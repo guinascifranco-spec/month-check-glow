@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { Logo } from "@/components/logo";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -72,7 +73,8 @@ function AuthPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="neu-raised w-full max-w-md rounded-3xl p-8">
-        <div className="mb-8 text-center">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <Logo height={64} className="mb-3" />
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Month Check</h1>
           <p className="mt-1 text-sm text-muted-foreground">Conferência financeira mensal</p>
         </div>
