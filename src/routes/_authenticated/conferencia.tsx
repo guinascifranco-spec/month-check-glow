@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Trash2, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
+import { InstallPWAButton } from "@/components/install-pwa-button";
 import {
   getMonthRows,
   addRow,
@@ -145,12 +146,15 @@ function ConferenciaPage() {
               <p className="text-sm text-muted-foreground">Conferência financeira mensal</p>
             </div>
           </div>
-          <button
-            onClick={signOut}
-            className="neu-pressable inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground"
-          >
-            <LogOut className="h-4 w-4" /> Sair
-          </button>
+          <div className="flex items-center gap-2">
+            <InstallPWAButton />
+            <button
+              onClick={signOut}
+              className="neu-pressable inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground"
+            >
+              <LogOut className="h-4 w-4" /> Sair
+            </button>
+          </div>
         </header>
 
         {/* Month selector */}

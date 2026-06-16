@@ -1,0 +1,26 @@
+{
+  "name": "Month Check — Conferência Financeira Mensal",
+  "short_name": "Month Check",
+  "description": "Confira suas entradas e saídas mês a mês com clareza.",
+  "start_url": "/conferencia",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#18273A",
+  "theme_color": "#18273A",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
