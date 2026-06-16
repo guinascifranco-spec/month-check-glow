@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Logo } from "@/components/logo";
+import { InstallPWAButton } from "@/components/install-pwa-button";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -81,6 +82,7 @@ function AuthPage() {
           <Logo height={64} className="mb-3" />
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Month Check</h1>
           <p className="mt-1 text-sm text-muted-foreground">Conferência financeira mensal</p>
+          <InstallPWAButton className="mt-4" />
         </div>
 
         <div className="neu-inset mb-6 flex rounded-full p-1">
