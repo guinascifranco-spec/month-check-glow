@@ -138,9 +138,12 @@ function ConferenciaPage() {
       <div className="mx-auto max-w-6xl">
         {/* Header */}
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
-            <p className="text-sm text-muted-foreground">Conferência financeira mensal</p>
+          <div className="flex items-center gap-3">
+            <Logo height={40} />
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
+              <p className="text-sm text-muted-foreground">Conferência financeira mensal</p>
+            </div>
           </div>
           <button
             onClick={signOut}
