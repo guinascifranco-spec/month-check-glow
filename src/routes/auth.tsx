@@ -135,7 +135,8 @@ function AuthPage() {
           <button
             type="submit"
             disabled={loading}
-            className="neu-pressable w-full rounded-xl bg-gradient-to-r from-primary to-secondary py-3 text-sm font-semibold text-black shadow-lg disabled:opacity-60"
+            className="neu-pressable w-full rounded-xl bg-gradient-to-r from-primary to-secondary py-3 text-sm font-semibold shadow-lg disabled:opacity-60"
+            style={{ color: '#18273A' }}
           >
             {loading ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}
           </button>
