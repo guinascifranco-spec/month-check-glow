@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Plus, Trash2, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 import { InstallPWAButton } from "@/components/install-pwa-button";
+import { PageTabs } from "@/components/page-tabs";
 import {
   getMonthRows,
   addRow,
@@ -156,6 +157,12 @@ function ConferenciaPage() {
             </button>
           </div>
         </header>
+
+        <div className="mb-6">
+          <PageTabs />
+        </div>
+
+
 
         {/* Month selector */}
         <div className="neu-raised mb-6 flex items-center justify-between rounded-2xl p-4">
