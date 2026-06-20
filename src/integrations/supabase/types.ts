@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      investments: {
+        Row: {
+          balance: number
+          category: string
+          created_at: string
+          id: string
+          monthly_return_pct: number
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          category?: string
+          created_at?: string
+          id?: string
+          monthly_return_pct?: number
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          category?: string
+          created_at?: string
+          id?: string
+          monthly_return_pct?: number
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       month_check_rows: {
         Row: {
           created_at: string
