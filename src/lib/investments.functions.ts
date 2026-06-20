@@ -60,7 +60,7 @@ export const updateInvestment = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const patch: Record<string, unknown> = {};
+    const patch: { category?: string; balance?: number; monthly_return_pct?: number } = {};
     if (data.category !== undefined) patch.category = data.category;
     if (data.balance !== undefined) patch.balance = data.balance;
     if (data.monthly_return_pct !== undefined) patch.monthly_return_pct = data.monthly_return_pct;
