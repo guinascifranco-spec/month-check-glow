@@ -1,65 +1,85 @@
+## Nova aba "Parcelas" no Month Check
 
-## Visão Geral
+Adiciona uma terceira aba ao lado de Conferência e Visão Geral para gerenciar gastos parcelados, com limite mensal, resumo, cadastro, lista de ativas e histórico de quitadas.
 
-Nova rota `/_authenticated/visao-geral` com três seções (Investimentos, Balanço Geral, Projeção Futura) e navegação entre páginas via top-bar de tabs ("Conferência" / "Visão Geral") presente no header das duas páginas autenticadas.
+### 1. Banco de dados (migração Supabase)
 
-## 1. Banco de dados
+Duas novas tabelas em `public`, com RLS por `auth.uid()`, GRANTs para `authenticated`/`service_role`, trigger de `updated_at`:
 
-Nova tabela `public.investments` via migração:
-- `id` (uuid, pk), `user_id` (uuid), `category` (text), `balance` (numeric), `monthly_return_pct` (numeric), `position` (int), `created_at`, `updated_at`
-- RLS: usuário só lê/edita suas próprias linhas (`auth.uid() = user_id`)
-- GRANT para `authenticated` e `service_role`; trigger `update_updated_at_column` para `updated_at`
+- `installment_settings`
+  - `user_id` (uuid, PK) — uma linha por usuário
+  - `monthly_limit` (numeric, default 0)
+- `installments`
+  - `id` (uuid, PK)
+  - `user_id` (uuid)
+  - `name` (text)
+  - `first_date` (date) — data da 1ª parcela
+  - `installment_value` (numeric) — valor mensal
+  - `total_installments` (int)
+  - `total_amount` (numeric) — `installment_value * total_installments`
+  - `position` (int)
 
-## 2. Server functions (`src/lib/investments.functions.ts`)
+Status (ativo/quitado) e número de parcelas pagas são **derivados** da data atual e de `first_date + total_installments`, evitando manutenção manual. Quando `today >= first_date + total_installments meses`, a compra aparece no Histórico automaticamente.
 
-- `listInvestments()` — retorna linhas do usuário ordenadas por `position`
-- `addInvestment()` — cria linha vazia no final
-- `updateInvestment({ id, category?, balance?, monthly_return_pct? })` — patch parcial
-- `deleteInvestment({ id })`
-- `getAllMonthlyTotals()` — retorna todos os meses lançados pelo usuário com `{ year, month, entradas, saidas, saldo }` (apenas meses que têm pelo menos uma linha com `valor != 0`), ordenado cronologicamente. Servirá como base do gráfico histórico e da projeção.
+### 2. Backend — `src/lib/installments.functions.ts`
 
-## 3. Página `src/routes/_authenticated/visao-geral.tsx`
+Server functions com `requireSupabaseAuth`:
+- `getSettings()` / `upsertLimit({ monthly_limit })`
+- `listInstallments()` — retorna todas as compras do usuário
+- `addInstallment({ name, first_date, installment_value, total_installments })`
+- `updateInstallment(...)` / `deleteInstallment(id)`
 
-### Header
-- Mesmo logo/InstallPWA/Sair da Conferência
-- Componente `<PageTabs />` compartilhado com botões "Conferência" e "Visão Geral" (também inserido no header da Conferência)
+Cálculo de status (ativo / restantes / data de término) feito no cliente a partir de `first_date` + `total_installments`, usando `date-fns` (já em uso no projeto — verificar; caso contrário, usar `Date` nativo).
 
-### Seção Investimentos
-- Tabela neumórfica com colunas: Categoria | Saldo (R$) | Rentab. mensal (%) | Ação
-- Botão "+ Adicionar investimento"
-- Auto-save por linha com debounce de 1s usando `useMutation` (dispara no `onChange`; cada linha tem seu timer). Optimistic update no cache da query.
-- Totais (cards abaixo): Total investido = Σ saldo; Rendimento mensal estimado = Σ (saldo × pct/100)
+### 3. Navegação
 
-### Seção Balanço Geral
-- 3 cards no topo da página:
-  - Saldo acumulado = Σ saldo de todos os meses lançados
-  - Total investido (vem dos investimentos)
-  - Patrimônio total = saldo acumulado + total investido
-- Gráfico Recharts `ComposedChart`:
-  - Eixo X = meses lançados ("Mai/25", "Jun/25"...)
-  - Barra: saldo mensal
-  - Linha: saldo acumulado
-  - Linha: patrimônio total acumulado (saldo acumulado + Σ rendimento dos investimentos até aquele mês — usando os investimentos atuais projetados retroativamente, ver seção técnica)
-  - Tooltip formatado em R$
+- `src/components/page-tabs.tsx`: adicionar `{ to: "/parcelas", label: "Parcelas" }`.
+- Nova rota: `src/routes/_authenticated/parcelas.tsx`.
 
-### Seção Projeção Futura
-- Base = média do `saldo` (entradas − saídas) dos últimos 3 meses lançados (ou menos, se houver < 3)
-- Rendimento mensal dos investimentos = Σ (saldo × pct/100)
-- Iteração: a cada mês, `patrimônio = patrimônio_anterior × (1 + taxa_média_compostos) + saldo_médio`, onde `taxa_média_compostos = rendimento_mensal_investimentos / total_investido` (se total > 0; caso contrário, só soma o saldo médio)
-- `Slider` (shadcn) de 6 a 60, passo 6. Label "X meses (Y anos)"
-- Gráfico Recharts `AreaChart` com duas séries no mesmo eixo X: passado (área sólida) + projeção (área tracejada com `strokeDasharray`), começando do último mês real
-- 3 cards abaixo do gráfico: Patrimônio projetado final, Ganho projetado (final − atual), Contribuição média mensal (saldo médio usado)
+### 4. Página `/parcelas`
 
-### Estilo
-- Reuso das classes `neu-raised`, `neu-pressable`, `neu-inset` e tokens existentes (primary verde esmeralda, secondary ciano). Tudo via tokens de `src/styles.css`.
+Layout neumorphic consistente com Conferência e Visão Geral (mesmo header com Logo, PageTabs, InstallPWAButton, LogOut).
 
-## 4. Dependências
+**Topo — Limite mensal**
+- Input numérico (R$) com auto-save (debounce 1s, mesmo padrão do Visão Geral).
+- Barra de progresso (`Progress` do shadcn já existente) com cor dinâmica:
+  - `< 70%` verde (primary)
+  - `70–90%` amarelo
+  - `> 90%` vermelho (destructive)
+- Texto: `R$ X de R$ Y comprometido (Z%)`.
 
-- `bun add recharts` (não presente atualmente)
+**Cards de resumo (3 cards neu-raised)**
+- Total comprometido = soma de `installment_value` das ativas
+- Próximas a vencer = quantidade de ativas que terminam nos próximos 2 meses
+- Maior parcela = compra ativa com maior `installment_value` (nome + valor)
 
-## 5. Detalhes técnicos
+**Botão "Nova Compra" → modal (Dialog)**
+- Campos: Nome, Data 1ª parcela (date input), Nº de parcelas.
+- Toggle (RadioGroup) Modo A / Modo B:
+  - A: input "Valor total" → preview do valor mensal
+  - B: input "Valor da parcela mensal" → preview do total
+- Preview ao vivo mostrando ambos os valores formatados em R$.
+- Aviso vermelho não-bloqueante quando `total_comprometido + nova_parcela > limite`, mostrando "Excederia em R$ X. Disponível: R$ Y".
+- Salva sempre `installment_value` e `total_installments` (o total é derivado).
 
-- Patrimônio histórico no gráfico: como não armazenamos snapshot por mês dos investimentos, calculamos a linha como `saldo_acumulado[t] + total_investido_atual` (constante) — alternativa simples e honesta; deixarei comentário no código. Caso o usuário prefira projetar rendimentos retroativos (juros compostos para trás), ajusto depois.
-- Formato monetário: helper `brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })` reutilizado.
-- `useServerFn` + TanStack Query (`useQuery` / `useMutation`) seguindo o padrão da `conferencia.tsx`.
-- `<PageTabs />` em `src/components/page-tabs.tsx`, usando `<Link>` do TanStack Router e `useRouterState` para destacar a ativa.
+**Lista de ativas**
+- Cards (não tabela), um por compra, ordenados por data de término ASC.
+- Conteúdo: nome, R$ parcela/mês, badge `pago/total` (ex: `4/12`), data de término (`MMM/AA`), mini-barra de progresso de parcelas pagas, botão excluir.
+
+**Seção Histórico (colapsável ou abaixo)**
+- Compras cujo término já passou.
+- Mostra: nome, valor total pago, período (início → fim), data de quitação.
+
+### 5. Design / regras
+
+- Tokens existentes (`neu-raised`, `neu-inset`, `neu-pressable`, primary `#10B981`, secondary `#06B6D4`, fundo `#F0F4F8`, Inter).
+- Valores em `Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })`.
+- Mobile-friendly: grid responsivo (`grid-cols-1 md:grid-cols-3` nos cards), modal full-width em telas pequenas.
+- Sem bibliotecas novas (Dialog, Progress, RadioGroup, Input, Button já existem em `src/components/ui`).
+
+### Detalhes técnicos
+
+- Loader da rota usa `ensureQueryData` para `getSettings` + `listInstallments` (padrão TanStack Query + `_authenticated`).
+- Auto-save do limite: `useRef` timer (mesmo padrão do `visao-geral.tsx`).
+- Status derivado: `monthsElapsed = diff(today, first_date)`; `paid = clamp(monthsElapsed + 1, 0, total)`; `remaining = total - paid`; `endDate = first_date + (total - 1) meses`.
+- RLS: todas as policies escopadas em `auth.uid() = user_id`; sem grant a `anon`.
