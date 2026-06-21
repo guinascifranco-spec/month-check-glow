@@ -152,10 +152,16 @@ function VisaoGeralPage() {
 
   // Projection
   const [horizon, setHorizon] = useState(12);
+  const [modoContribuicao, setModoContribuicao] = useState<"auto" | "manual">("auto");
+  const [saldoMensalFixo, setSaldoMensalFixo] = useState("");
   const projData = useMemo(() => {
     const last3 = monthly.slice(-3);
-    const base =
+    const autoBase =
       last3.length > 0 ? last3.reduce((s, m) => s + m.saldo, 0) / last3.length : 0;
+    const base =
+      modoContribuicao === "manual" && saldoMensalFixo !== "" && !Number.isNaN(Number(saldoMensalFixo))
+        ? Number(saldoMensalFixo)
+        : autoBase;
     const rate = totalInvestido > 0 ? rendimentoMensal / totalInvestido : 0;
 
     const real = histData.map((d) => ({
@@ -186,7 +192,7 @@ function VisaoGeralPage() {
     // Merge: keep `real` series only on real points, `proj` only on projected
     const merged = [...real.slice(0, -1), ...proj];
     return { data: merged, base, finalValue: patrimonio, rate };
-  }, [monthly, histData, totalInvestido, rendimentoMensal, horizon]);
+  }, [monthly, histData, totalInvestido, rendimentoMensal, horizon, modoContribuicao, saldoMensalFixo]);
 
   const ganhoProjetado = projData.finalValue - patrimonioTotal;
 
@@ -326,7 +332,52 @@ function VisaoGeralPage() {
                 Projeção Futura
               </div>
               <div className="mt-1 text-sm text-muted-foreground">
-                Baseada na média dos últimos {Math.min(3, monthly.length)} meses + juros compostos dos investimentos.
+                {modoContribuicao === "auto"
+                  ? `Baseada na média dos últimos ${Math.min(3, monthly.length)} meses + juros compostos dos investimentos.`
+                  : "Baseada no saldo mensal fixo informado + juros compostos dos investimentos."}
+              </div>
+              {/* Radio de modo de contribuição */}
+              <div className="mt-3 flex flex-wrap items-center gap-4">
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="modoContribuicao"
+                    value="auto"
+                    checked={modoContribuicao === "auto"}
+                    onChange={() => setModoContribuicao("auto")}
+                    className="accent-primary"
+                  />
+                  <span className={modoContribuicao === "auto" ? "font-semibold text-foreground" : "text-muted-foreground"}>
+                    Automático (média dos últimos meses)
+                  </span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="modoContribuicao"
+                    value="manual"
+                    checked={modoContribuicao === "manual"}
+                    onChange={() => setModoContribuicao("manual")}
+                    className="accent-primary"
+                  />
+                  <span className={modoContribuicao === "manual" ? "font-semibold text-foreground" : "text-muted-foreground"}>
+                    Manual (valor fixo)
+                  </span>
+                </label>
+                {modoContribuicao === "manual" && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">R$</span>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={saldoMensalFixo}
+                      onChange={(e) => setSaldoMensalFixo(e.target.value)}
+                      className="neu-inset w-40 rounded-xl bg-transparent px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                )}
               </div>
             </div>
             <div className="min-w-[260px] flex-1 max-w-md">
@@ -392,7 +443,11 @@ function VisaoGeralPage() {
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <SummaryCard label="Patrimônio projetado" value={projData.finalValue} tone="primary" emphasize />
             <SummaryCard label="Ganho projetado" value={ganhoProjetado} tone={ganhoProjetado >= 0 ? "primary" : "danger"} />
-            <SummaryCard label="Contribuição média mensal" value={projData.base} tone="secondary" />
+            <SummaryCard
+              label={modoContribuicao === "manual" ? "Saldo mensal fixo" : "Contribuição média mensal"}
+              value={projData.base}
+              tone="secondary"
+            />
           </div>
         </section>
       </div>
