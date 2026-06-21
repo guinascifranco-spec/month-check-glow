@@ -3,6 +3,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 const tabs = [
   { to: "/conferencia", label: "Conferência" },
   { to: "/visao-geral", label: "Visão Geral" },
+  { to: "/parcelas", label: "Parcelas" },
 ] as const;
 
 export function PageTabs() {
