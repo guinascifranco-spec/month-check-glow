@@ -530,10 +530,9 @@ function NewPurchaseDialog({
           <div>
             <Label>{mode === "total" ? "Valor total (R$)" : "Valor da parcela (R$)"}</Label>
             <Input
-              type="number"
+              type="text"
               inputMode="decimal"
-              min={0}
-              step="0.01"
+              pattern="[0-9.,]*"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0,00"
