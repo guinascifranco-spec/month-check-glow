@@ -911,7 +911,7 @@ function NovoProventoDialog({
           </div>
           <div>
             <Label>Valor</Label>
-            <Input type="number" step="any" value={valor} onChange={(e) => setValor(e.target.value)} className="mt-1" />
+            <Input type="text" inputMode="decimal" pattern="[0-9.,]*" value={valor} onChange={(e) => setValor(e.target.value)} className="mt-1" />
           </div>
           <button
             disabled={saving || !ativoId || nVal <= 0}
