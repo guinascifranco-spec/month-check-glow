@@ -775,7 +775,7 @@ function NovoAporteDialog({
             </div>
             <div>
               <Label>Quantidade</Label>
-              <Input type="number" step="any" value={qtd} onChange={(e) => setQtd(e.target.value)} className="mt-1" />
+              <Input type="text" inputMode="decimal" pattern="[0-9.,]*" value={qtd} onChange={(e) => setQtd(e.target.value)} className="mt-1" />
             </div>
             <div>
               <Label>Valor unitário</Label>
