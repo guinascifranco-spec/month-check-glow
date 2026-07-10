@@ -368,9 +368,9 @@ function VisaoGeralPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">R$</span>
                     <input
-                      type="number"
+                      type="text"
                       inputMode="decimal"
-                      step="0.01"
+                      pattern="[0-9.,]*"
                       placeholder="0,00"
                       value={saldoMensalFixo}
                       onChange={(e) => setSaldoMensalFixo(e.target.value)}
