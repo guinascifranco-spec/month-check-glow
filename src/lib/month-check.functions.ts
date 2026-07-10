@@ -106,20 +106,23 @@ export const updateRow = createServerFn({ method: "POST" })
     descricao?: string;
     tipo?: "entrada" | "saida";
     valor?: number;
+    quitado?: boolean;
   }) =>
     z.object({
       id: z.string().uuid(),
       descricao: z.string().optional(),
       tipo: z.enum(["entrada", "saida"]).optional(),
       valor: z.number().optional(),
+      quitado: z.boolean().optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const patch: { descricao?: string; tipo?: "entrada" | "saida"; valor?: number } = {};
+    const patch: { descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean } = {};
     if (data.descricao !== undefined) patch.descricao = data.descricao;
     if (data.tipo !== undefined) patch.tipo = data.tipo;
     if (data.valor !== undefined) patch.valor = data.valor;
+    if (data.quitado !== undefined) patch.quitado = data.quitado;
     const { data: row, error } = await supabase
       .from("month_check_rows")
       .update(patch)
@@ -129,6 +132,25 @@ export const updateRow = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     return row;
+  });
+
+export const reorderRows = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { orderedIds: string[] }) =>
+    z.object({ orderedIds: z.array(z.string().uuid()) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    await Promise.all(
+      data.orderedIds.map((id, idx) =>
+        supabase
+          .from("month_check_rows")
+          .update({ position: idx })
+          .eq("id", id)
+          .eq("user_id", userId),
+      ),
+    );
+    return { ok: true };
   });
 
 export const deleteRow = createServerFn({ method: "POST" })
