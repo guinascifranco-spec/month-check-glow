@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Trash2, LogOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, LogOut, GripVertical, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 import { InstallPWAButton } from "@/components/install-pwa-button";
@@ -13,6 +13,7 @@ import {
   updateRow,
   deleteRow,
   getYearTotals,
+  reorderRows,
 } from "@/lib/month-check.functions";
 
 
@@ -32,6 +33,7 @@ type Row = {
   tipo: "entrada" | "saida";
   valor: number;
   position: number;
+  quitado: boolean;
 };
 
 const MESES = [
@@ -53,6 +55,7 @@ function ConferenciaPage() {
   const updateRowFn = useServerFn(updateRow);
   const deleteRowFn = useServerFn(deleteRow);
   const fetchYearTotals = useServerFn(getYearTotals);
+  const reorderRowsFn = useServerFn(reorderRows);
 
   const queryKey = ["month-rows", year, month] as const;
   const yearKey = ["year-totals", year] as const;
@@ -93,7 +96,7 @@ function ConferenciaPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (patch: { id: string; descricao?: string; tipo?: "entrada" | "saida"; valor?: number }) =>
+    mutationFn: (patch: { id: string; descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean }) =>
       updateRowFn({ data: patch }),
     onMutate: async (patch) => {
       await queryClient.cancelQueries({ queryKey });
@@ -108,6 +111,27 @@ function ConferenciaPage() {
     },
     onSettled: invalidateAll,
   });
+
+  const reorderMutation = useMutation({
+    mutationFn: (orderedIds: string[]) => reorderRowsFn({ data: { orderedIds } }),
+    onSettled: invalidateAll,
+  });
+
+  const [dragId, setDragId] = useState<string | null>(null);
+
+  function handleDrop(targetId: string) {
+    if (!dragId || dragId === targetId) { setDragId(null); return; }
+    const current = queryClient.getQueryData<Row[]>(queryKey) ?? rows;
+    const src = current.find((r) => r.id === dragId);
+    const tgt = current.find((r) => r.id === targetId);
+    if (!src || !tgt || src.tipo !== tgt.tipo) { setDragId(null); return; }
+    const without = current.filter((r) => r.id !== dragId);
+    const targetIdx = without.findIndex((r) => r.id === targetId);
+    const reordered = [...without.slice(0, targetIdx), src, ...without.slice(targetIdx)];
+    queryClient.setQueryData<Row[]>(queryKey, reordered);
+    reorderMutation.mutate(reordered.map((r) => r.id));
+    setDragId(null);
+  }
 
 
   const totals = useMemo(() => {
@@ -196,24 +220,30 @@ function ConferenciaPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="w-8 px-2 py-4"></th>
                   <th className="px-4 py-4">Descrição</th>
                   <th className="px-4 py-4">Tipo</th>
                   <th className="px-4 py-4 text-right">Entrada (R$)</th>
                   <th className="px-4 py-4 text-right">Saída (R$)</th>
+                  <th className="px-4 py-4 text-center">Quitado</th>
                   <th className="px-4 py-4 text-right">Ação</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && (
-                  <tr><td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">Carregando...</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">Carregando...</td></tr>
                 )}
                 {!isLoading && rows.length === 0 && (
-                  <tr><td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">Nenhuma linha. Adicione uma entrada ou saída.</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">Nenhuma linha. Adicione uma entrada ou saída.</td></tr>
                 )}
                 {rows.map((row) => (
                   <RowItem
                     key={row.id}
                     row={row}
+                    isDragging={dragId === row.id}
+                    onDragStart={() => setDragId(row.id)}
+                    onDragEnd={() => setDragId(null)}
+                    onDropRow={() => handleDrop(row.id)}
                     onUpdate={(patch) => updateMutation.mutate({ id: row.id, ...patch })}
                     onDelete={() => deleteMutation.mutate(row.id)}
                   />
@@ -494,11 +524,15 @@ function YearLineChart({
 
 
 function RowItem({
-  row, onUpdate, onDelete,
+  row, onUpdate, onDelete, isDragging, onDragStart, onDragEnd, onDropRow,
 }: {
   row: Row;
-  onUpdate: (patch: { descricao?: string; tipo?: "entrada" | "saida"; valor?: number }) => void;
+  onUpdate: (patch: { descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean }) => void;
   onDelete: () => void;
+  isDragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDropRow: () => void;
 }) {
   const [descricao, setDescricao] = useState(row.descricao);
   const [valor, setValor] = useState<string>(String(row.valor ?? 0));
@@ -527,15 +561,33 @@ function RowItem({
   }
 
   const isEntrada = row.tipo === "entrada";
+  const quitado = row.quitado;
+  const rowCls = `border-t border-border/60 transition-opacity ${isDragging ? "opacity-40" : ""} ${quitado ? "opacity-60" : ""}`;
+  const textCls = quitado ? "line-through" : "";
 
   return (
-    <tr className="border-t border-border/60">
+    <tr
+      className={rowCls}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={onDropRow}
+    >
+      <td className="px-2 py-3">
+        <div
+          draggable
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          className="flex cursor-grab items-center justify-center text-muted-foreground/60 hover:text-muted-foreground active:cursor-grabbing"
+          aria-label="Arrastar para reordenar"
+        >
+          <GripVertical className="h-4 w-4" />
+        </div>
+      </td>
       <td className="px-4 py-3">
         <input
           value={descricao}
           onChange={(e) => { setDescricao(e.target.value); scheduleSave(commitDescricao); }}
           onBlur={commitDescricao}
-          className="neu-inset w-full rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+          className={`neu-inset w-full rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 ${textCls}`}
           placeholder="Descrição"
         />
       </td>
@@ -564,7 +616,7 @@ function RowItem({
           disabled={!isEntrada}
           onChange={(e) => { setValor(e.target.value); scheduleSave(commitValor); }}
           onBlur={commitValor}
-          className={`neu-inset w-full max-w-[140px] rounded-lg px-3 py-2 text-right text-sm outline-none focus:ring-2 focus:ring-primary/40 ${!isEntrada ? "opacity-40" : ""}`}
+          className={`neu-inset w-full max-w-[140px] rounded-lg px-3 py-2 text-right text-sm outline-none focus:ring-2 focus:ring-primary/40 ${!isEntrada ? "opacity-40" : ""} ${textCls}`}
           placeholder="0,00"
         />
       </td>
@@ -575,9 +627,20 @@ function RowItem({
           disabled={isEntrada}
           onChange={(e) => { setValor(e.target.value); scheduleSave(commitValor); }}
           onBlur={commitValor}
-          className={`neu-inset w-full max-w-[140px] rounded-lg px-3 py-2 text-right text-sm outline-none focus:ring-2 focus:ring-danger/40 ${isEntrada ? "opacity-40" : ""}`}
+          className={`neu-inset w-full max-w-[140px] rounded-lg px-3 py-2 text-right text-sm outline-none focus:ring-2 focus:ring-danger/40 ${isEntrada ? "opacity-40" : ""} ${textCls}`}
           placeholder="0,00"
         />
+      </td>
+      <td className="px-4 py-3 text-center">
+        <button
+          type="button"
+          onClick={() => onUpdate({ quitado: !quitado })}
+          aria-pressed={quitado}
+          aria-label={quitado ? "Marcar como não quitado" : "Marcar como quitado"}
+          className={`neu-pressable inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${quitado ? "text-primary" : "text-muted-foreground/50"}`}
+        >
+          <Check className={`h-4 w-4 transition-opacity ${quitado ? "opacity-100" : "opacity-30"}`} />
+        </button>
       </td>
       <td className="px-4 py-3 text-right">
         <button
