@@ -158,9 +158,10 @@ function VisaoGeralPage() {
     const last3 = monthly.slice(-3);
     const autoBase =
       last3.length > 0 ? last3.reduce((s, m) => s + m.saldo, 0) / last3.length : 0;
+    const manualNum = parseFloat(saldoMensalFixo.replace(",", "."));
     const base =
-      modoContribuicao === "manual" && saldoMensalFixo !== "" && !Number.isNaN(Number(saldoMensalFixo))
-        ? Number(saldoMensalFixo)
+      modoContribuicao === "manual" && !Number.isNaN(manualNum)
+        ? manualNum
         : autoBase;
     const rate = totalInvestido > 0 ? rendimentoMensal / totalInvestido : 0;
 
@@ -368,9 +369,9 @@ function VisaoGeralPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">R$</span>
                     <input
-                      type="number"
+                      type="text"
                       inputMode="decimal"
-                      step="0.01"
+                      pattern="[0-9.,]*"
                       placeholder="0,00"
                       value={saldoMensalFixo}
                       onChange={(e) => setSaldoMensalFixo(e.target.value)}
@@ -500,13 +501,25 @@ function InvestmentRow({
   const [category, setCategory] = useState(investment.category);
   const [balance, setBalance] = useState(String(investment.balance ?? 0));
   const [pct, setPct] = useState(String(investment.monthly_return_pct ?? 0));
+  const catFocused = useRef(false);
+  const balFocused = useRef(false);
+  const pctFocused = useRef(false);
 
-  // sync when row replaced (e.g. after refetch)
+  // Sync from server only when not focused and the value truly diverges.
   useEffect(() => {
-    setCategory(investment.category);
-    setBalance(String(investment.balance ?? 0));
-    setPct(String(investment.monthly_return_pct ?? 0));
-  }, [investment.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!catFocused.current && category !== investment.category) {
+      setCategory(investment.category);
+    }
+    if (!balFocused.current) {
+      const n = parseFloat(balance.replace(",", ".")) || 0;
+      if (n !== Number(investment.balance)) setBalance(String(investment.balance ?? 0));
+    }
+    if (!pctFocused.current) {
+      const n = parseFloat(pct.replace(",", ".")) || 0;
+      if (n !== Number(investment.monthly_return_pct)) setPct(String(investment.monthly_return_pct ?? 0));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [investment.id, investment.category, investment.balance, investment.monthly_return_pct]);
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debounce = (fn: () => void) => {
@@ -519,6 +532,8 @@ function InvestmentRow({
       <td className="px-3 py-2">
         <input
           value={category}
+          onFocus={() => { catFocused.current = true; }}
+          onBlur={() => { catFocused.current = false; }}
           onChange={(e) => {
             setCategory(e.target.value);
             const v = e.target.value;
@@ -530,13 +545,16 @@ function InvestmentRow({
       </td>
       <td className="px-3 py-2">
         <input
-          type="number"
+          type="text"
           inputMode="decimal"
-          step="0.01"
+          pattern="[0-9.,]*"
           value={balance}
+          onFocus={() => { balFocused.current = true; }}
+          onBlur={() => { balFocused.current = false; }}
           onChange={(e) => {
-            setBalance(e.target.value);
-            const n = Number(e.target.value);
+            const raw = e.target.value;
+            setBalance(raw);
+            const n = parseFloat(raw.replace(",", "."));
             if (!Number.isNaN(n)) debounce(() => onPatch({ balance: n }));
           }}
           className="neu-inset w-full rounded-xl bg-transparent px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-2 focus:ring-primary/30"
@@ -544,13 +562,16 @@ function InvestmentRow({
       </td>
       <td className="px-3 py-2">
         <input
-          type="number"
+          type="text"
           inputMode="decimal"
-          step="0.01"
+          pattern="[0-9.,]*"
           value={pct}
+          onFocus={() => { pctFocused.current = true; }}
+          onBlur={() => { pctFocused.current = false; }}
           onChange={(e) => {
-            setPct(e.target.value);
-            const n = Number(e.target.value);
+            const raw = e.target.value;
+            setPct(raw);
+            const n = parseFloat(raw.replace(",", "."));
             if (!Number.isNaN(n)) debounce(() => onPatch({ monthly_return_pct: n }));
           }}
           className="neu-inset w-full rounded-xl bg-transparent px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-2 focus:ring-primary/30"

@@ -537,9 +537,22 @@ function RowItem({
   const [descricao, setDescricao] = useState(row.descricao);
   const [valor, setValor] = useState<string>(String(row.valor ?? 0));
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const descFocused = useRef(false);
+  const valorFocused = useRef(false);
 
-  useEffect(() => { setDescricao(row.descricao); }, [row.descricao]);
-  useEffect(() => { setValor(String(row.valor ?? 0)); }, [row.valor]);
+  // Only re-sync from server when the input isn't focused AND the value
+  // truly diverges numerically — never overwrite the user mid-typing.
+  useEffect(() => {
+    if (descFocused.current) return;
+    if (descricao !== row.descricao) setDescricao(row.descricao);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row.id, row.descricao]);
+  useEffect(() => {
+    if (valorFocused.current) return;
+    const localNum = parseFloat(valor.replace(",", ".")) || 0;
+    if (localNum !== Number(row.valor)) setValor(String(row.valor ?? 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row.id, row.valor]);
 
   function scheduleSave(fn: () => void) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -585,8 +598,9 @@ function RowItem({
       <td className="px-4 py-3">
         <input
           value={descricao}
+          onFocus={() => { descFocused.current = true; }}
           onChange={(e) => { setDescricao(e.target.value); scheduleSave(commitDescricao); }}
-          onBlur={commitDescricao}
+          onBlur={() => { descFocused.current = false; commitDescricao(); }}
           className={`neu-inset w-full rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 ${textCls}`}
           placeholder="Descrição"
         />
@@ -611,23 +625,25 @@ function RowItem({
       </td>
       <td className="px-4 py-3 text-right">
         <input
-          type="number" step="0.01" min="0"
+          type="text" inputMode="decimal" pattern="[0-9.,]*"
           value={isEntrada ? valor : ""}
           disabled={!isEntrada}
+          onFocus={() => { valorFocused.current = true; }}
           onChange={(e) => { setValor(e.target.value); scheduleSave(commitValor); }}
-          onBlur={commitValor}
-          className={`neu-inset w-full max-w-[140px] rounded-lg px-3 py-2 text-right text-sm outline-none focus:ring-2 focus:ring-primary/40 ${!isEntrada ? "opacity-40" : ""} ${textCls}`}
+          onBlur={() => { valorFocused.current = false; commitValor(); }}
+          className={`neu-inset w-full max-w-[140px] rounded-lg px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-2 focus:ring-primary/40 ${!isEntrada ? "opacity-40" : ""} ${textCls}`}
           placeholder="0,00"
         />
       </td>
       <td className="px-4 py-3 text-right">
         <input
-          type="number" step="0.01" min="0"
+          type="text" inputMode="decimal" pattern="[0-9.,]*"
           value={!isEntrada ? valor : ""}
           disabled={isEntrada}
+          onFocus={() => { valorFocused.current = true; }}
           onChange={(e) => { setValor(e.target.value); scheduleSave(commitValor); }}
-          onBlur={commitValor}
-          className={`neu-inset w-full max-w-[140px] rounded-lg px-3 py-2 text-right text-sm outline-none focus:ring-2 focus:ring-danger/40 ${isEntrada ? "opacity-40" : ""} ${textCls}`}
+          onBlur={() => { valorFocused.current = false; commitValor(); }}
+          className={`neu-inset w-full max-w-[140px] rounded-lg px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-2 focus:ring-danger/40 ${isEntrada ? "opacity-40" : ""} ${textCls}`}
           placeholder="0,00"
         />
       </td>

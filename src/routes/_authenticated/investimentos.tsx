@@ -775,15 +775,15 @@ function NovoAporteDialog({
             </div>
             <div>
               <Label>Quantidade</Label>
-              <Input type="number" step="any" value={qtd} onChange={(e) => setQtd(e.target.value)} className="mt-1" />
+              <Input type="text" inputMode="decimal" pattern="[0-9.,]*" value={qtd} onChange={(e) => setQtd(e.target.value)} className="mt-1" />
             </div>
             <div>
               <Label>Valor unitário</Label>
-              <Input type="number" step="any" value={vu} onChange={(e) => setVu(e.target.value)} className="mt-1" />
+              <Input type="text" inputMode="decimal" pattern="[0-9.,]*" value={vu} onChange={(e) => setVu(e.target.value)} className="mt-1" />
             </div>
             <div>
               <Label>Taxas</Label>
-              <Input type="number" step="any" value={taxas} onChange={(e) => setTaxas(e.target.value)} className="mt-1" />
+              <Input type="text" inputMode="decimal" pattern="[0-9.,]*" value={taxas} onChange={(e) => setTaxas(e.target.value)} className="mt-1" />
             </div>
           </div>
           <div className="neu-inset rounded-xl px-4 py-3 text-sm">
@@ -911,7 +911,7 @@ function NovoProventoDialog({
           </div>
           <div>
             <Label>Valor</Label>
-            <Input type="number" step="any" value={valor} onChange={(e) => setValor(e.target.value)} className="mt-1" />
+            <Input type="text" inputMode="decimal" pattern="[0-9.,]*" value={valor} onChange={(e) => setValor(e.target.value)} className="mt-1" />
           </div>
           <button
             disabled={saving || !ativoId || nVal <= 0}

@@ -101,8 +101,14 @@ function ParcelasPage() {
   // Limit input — debounced auto-save
   const [limitInput, setLimitInput] = useState<string>("");
   const limitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const limitFocused = useRef(false);
   useEffect(() => {
-    if (settings) setLimitInput(String(Number(settings.monthly_limit) || 0));
+    if (!settings) return;
+    if (limitFocused.current) return;
+    const localNum = parseFloat(limitInput.replace(",", ".")) || 0;
+    const serverNum = Number(settings.monthly_limit) || 0;
+    if (localNum !== serverNum) setLimitInput(String(serverNum));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings?.monthly_limit]);
 
   const limitMutation = useMutation({
@@ -211,13 +217,14 @@ function ParcelasPage() {
               <div className="mt-2 flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">R$</span>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="decimal"
-                  min={0}
-                  step="0.01"
+                  pattern="[0-9.,]*"
                   value={limitInput}
+                  onFocus={() => { limitFocused.current = true; }}
+                  onBlur={() => { limitFocused.current = false; }}
                   onChange={(e) => onLimitChange(e.target.value)}
-                  className="neu-inset w-40 rounded-xl bg-transparent px-3 py-2 text-lg font-semibold outline-none"
+                  className="neu-inset w-40 rounded-xl bg-transparent px-3 py-2 text-lg font-semibold tabular-nums outline-none"
                   placeholder="0,00"
                 />
               </div>
@@ -523,10 +530,9 @@ function NewPurchaseDialog({
           <div>
             <Label>{mode === "total" ? "Valor total (R$)" : "Valor da parcela (R$)"}</Label>
             <Input
-              type="number"
+              type="text"
               inputMode="decimal"
-              min={0}
-              step="0.01"
+              pattern="[0-9.,]*"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0,00"
