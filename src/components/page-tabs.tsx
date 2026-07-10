@@ -4,6 +4,7 @@ const tabs = [
   { to: "/conferencia", label: "Conferência" },
   { to: "/visao-geral", label: "Visão Geral" },
   { to: "/parcelas", label: "Parcelas" },
+  { to: "/investimentos", label: "Investimentos" },
 ] as const;
 
 export function PageTabs() {
