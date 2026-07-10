@@ -537,9 +537,22 @@ function RowItem({
   const [descricao, setDescricao] = useState(row.descricao);
   const [valor, setValor] = useState<string>(String(row.valor ?? 0));
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const descFocused = useRef(false);
+  const valorFocused = useRef(false);
 
-  useEffect(() => { setDescricao(row.descricao); }, [row.descricao]);
-  useEffect(() => { setValor(String(row.valor ?? 0)); }, [row.valor]);
+  // Only re-sync from server when the input isn't focused AND the value
+  // truly diverges numerically — never overwrite the user mid-typing.
+  useEffect(() => {
+    if (descFocused.current) return;
+    if (descricao !== row.descricao) setDescricao(row.descricao);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row.id, row.descricao]);
+  useEffect(() => {
+    if (valorFocused.current) return;
+    const localNum = parseFloat(valor.replace(",", ".")) || 0;
+    if (localNum !== Number(row.valor)) setValor(String(row.valor ?? 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row.id, row.valor]);
 
   function scheduleSave(fn: () => void) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
