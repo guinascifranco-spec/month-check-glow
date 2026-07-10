@@ -1,0 +1,1 @@
+ALTER TABLE public.month_check_rows ADD COLUMN IF NOT EXISTS quitado boolean NOT NULL DEFAULT false;
