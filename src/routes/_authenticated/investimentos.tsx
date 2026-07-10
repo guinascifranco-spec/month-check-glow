@@ -779,7 +779,7 @@ function NovoAporteDialog({
             </div>
             <div>
               <Label>Valor unitário</Label>
-              <Input type="number" step="any" value={vu} onChange={(e) => setVu(e.target.value)} className="mt-1" />
+              <Input type="text" inputMode="decimal" pattern="[0-9.,]*" value={vu} onChange={(e) => setVu(e.target.value)} className="mt-1" />
             </div>
             <div>
               <Label>Taxas</Label>
