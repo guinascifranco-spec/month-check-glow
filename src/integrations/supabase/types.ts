@@ -14,6 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
+      aportes: {
+        Row: {
+          ativo_id: string
+          created_at: string
+          data: string
+          id: string
+          is_retroativo: boolean
+          quantidade: number
+          taxas: number
+          updated_at: string
+          user_id: string
+          valor_total: number
+          valor_unitario: number
+        }
+        Insert: {
+          ativo_id: string
+          created_at?: string
+          data: string
+          id?: string
+          is_retroativo?: boolean
+          quantidade?: number
+          taxas?: number
+          updated_at?: string
+          user_id: string
+          valor_total?: number
+          valor_unitario?: number
+        }
+        Update: {
+          ativo_id?: string
+          created_at?: string
+          data?: string
+          id?: string
+          is_retroativo?: boolean
+          quantidade?: number
+          taxas?: number
+          updated_at?: string
+          user_id?: string
+          valor_total?: number
+          valor_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aportes_ativo_id_fkey"
+            columns: ["ativo_id"]
+            isOneToOne: false
+            referencedRelation: "ativos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ativos: {
+        Row: {
+          corretora: string | null
+          created_at: string
+          id: string
+          nome: string
+          tipo: Database["public"]["Enums"]["asset_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          corretora?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+          tipo: Database["public"]["Enums"]["asset_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          corretora?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          tipo?: Database["public"]["Enums"]["asset_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       installment_settings: {
         Row: {
           created_at: string
@@ -143,6 +223,60 @@ export type Database = {
         }
         Relationships: []
       }
+      proventos: {
+        Row: {
+          aporte_reinvestimento_id: string | null
+          ativo_id: string
+          created_at: string
+          data_recebimento: string
+          id: string
+          status: Database["public"]["Enums"]["provento_status"]
+          tipo: Database["public"]["Enums"]["provento_type"]
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          aporte_reinvestimento_id?: string | null
+          ativo_id: string
+          created_at?: string
+          data_recebimento: string
+          id?: string
+          status?: Database["public"]["Enums"]["provento_status"]
+          tipo: Database["public"]["Enums"]["provento_type"]
+          updated_at?: string
+          user_id: string
+          valor?: number
+        }
+        Update: {
+          aporte_reinvestimento_id?: string | null
+          ativo_id?: string
+          created_at?: string
+          data_recebimento?: string
+          id?: string
+          status?: Database["public"]["Enums"]["provento_status"]
+          tipo?: Database["public"]["Enums"]["provento_type"]
+          updated_at?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proventos_aporte_reinvestimento_id_fkey"
+            columns: ["aporte_reinvestimento_id"]
+            isOneToOne: false
+            referencedRelation: "aportes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proventos_ativo_id_fkey"
+            columns: ["ativo_id"]
+            isOneToOne: false
+            referencedRelation: "ativos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -151,7 +285,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      asset_type: "acao" | "fii" | "renda_fixa" | "cripto"
+      provento_status: "a_reinvestir" | "reinvestido"
+      provento_type: "dividendo" | "jcp" | "rendimento" | "cupom"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -278,6 +414,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      asset_type: ["acao", "fii", "renda_fixa", "cripto"],
+      provento_status: ["a_reinvestir", "reinvestido"],
+      provento_type: ["dividendo", "jcp", "rendimento", "cupom"],
+    },
   },
 } as const
