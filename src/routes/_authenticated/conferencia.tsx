@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Trash2, LogOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, LogOut, GripVertical, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 import { InstallPWAButton } from "@/components/install-pwa-button";
@@ -13,6 +13,7 @@ import {
   updateRow,
   deleteRow,
   getYearTotals,
+  reorderRows,
 } from "@/lib/month-check.functions";
 
 
