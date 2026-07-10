@@ -101,8 +101,14 @@ function ParcelasPage() {
   // Limit input — debounced auto-save
   const [limitInput, setLimitInput] = useState<string>("");
   const limitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const limitFocused = useRef(false);
   useEffect(() => {
-    if (settings) setLimitInput(String(Number(settings.monthly_limit) || 0));
+    if (!settings) return;
+    if (limitFocused.current) return;
+    const localNum = parseFloat(limitInput.replace(",", ".")) || 0;
+    const serverNum = Number(settings.monthly_limit) || 0;
+    if (localNum !== serverNum) setLimitInput(String(serverNum));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings?.monthly_limit]);
 
   const limitMutation = useMutation({
