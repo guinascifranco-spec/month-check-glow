@@ -783,7 +783,7 @@ function NovoAporteDialog({
             </div>
             <div>
               <Label>Taxas</Label>
-              <Input type="number" step="any" value={taxas} onChange={(e) => setTaxas(e.target.value)} className="mt-1" />
+              <Input type="text" inputMode="decimal" pattern="[0-9.,]*" value={taxas} onChange={(e) => setTaxas(e.target.value)} className="mt-1" />
             </div>
           </div>
           <div className="neu-inset rounded-xl px-4 py-3 text-sm">
