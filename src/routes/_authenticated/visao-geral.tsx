@@ -158,9 +158,10 @@ function VisaoGeralPage() {
     const last3 = monthly.slice(-3);
     const autoBase =
       last3.length > 0 ? last3.reduce((s, m) => s + m.saldo, 0) / last3.length : 0;
+    const manualNum = parseFloat(saldoMensalFixo.replace(",", "."));
     const base =
-      modoContribuicao === "manual" && saldoMensalFixo !== "" && !Number.isNaN(Number(saldoMensalFixo))
-        ? Number(saldoMensalFixo)
+      modoContribuicao === "manual" && !Number.isNaN(manualNum)
+        ? manualNum
         : autoBase;
     const rate = totalInvestido > 0 ? rendimentoMensal / totalInvestido : 0;
 
