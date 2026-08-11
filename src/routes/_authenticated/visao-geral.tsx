@@ -608,3 +608,103 @@ function InvestmentRow({
     </tr>
   );
 }
+
+function InvestmentCard({
+  investment,
+  onPatch,
+  onDelete,
+}: {
+  investment: Investment;
+  onPatch: (p: { category?: string; balance?: number; monthly_return_pct?: number }) => void;
+  onDelete: () => void;
+}) {
+  const [category, setCategory] = useState(investment.category);
+  const [balance, setBalance] = useState(String(investment.balance ?? 0));
+  const [pct, setPct] = useState(String(investment.monthly_return_pct ?? 0));
+  const catFocused = useRef(false);
+  const balFocused = useRef(false);
+  const pctFocused = useRef(false);
+
+  useEffect(() => {
+    if (!catFocused.current && category !== investment.category) setCategory(investment.category);
+    if (!balFocused.current) {
+      const n = parseFloat(balance.replace(",", ".")) || 0;
+      if (n !== Number(investment.balance)) setBalance(String(investment.balance ?? 0));
+    }
+    if (!pctFocused.current) {
+      const n = parseFloat(pct.replace(",", ".")) || 0;
+      if (n !== Number(investment.monthly_return_pct)) setPct(String(investment.monthly_return_pct ?? 0));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [investment.id, investment.category, investment.balance, investment.monthly_return_pct]);
+
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounce = (fn: () => void) => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(fn, 1000);
+  };
+
+  return (
+    <div className="neu-raised rounded-2xl p-4">
+      <div className="flex items-center gap-2">
+        <input
+          value={category}
+          onFocus={() => { catFocused.current = true; }}
+          onBlur={() => { catFocused.current = false; }}
+          onChange={(e) => {
+            setCategory(e.target.value);
+            const v = e.target.value;
+            debounce(() => onPatch({ category: v }));
+          }}
+          placeholder="Renda Fixa, Ações…"
+          className="neu-inset min-h-[44px] w-full min-w-0 rounded-xl bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        <button
+          onClick={onDelete}
+          className="neu-pressable inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-danger"
+          aria-label="Remover investimento"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Saldo (R$)</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            pattern="[0-9.,]*"
+            value={balance}
+            onFocus={() => { balFocused.current = true; }}
+            onBlur={() => { balFocused.current = false; }}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setBalance(raw);
+              const n = parseFloat(raw.replace(",", "."));
+              if (!Number.isNaN(n)) debounce(() => onPatch({ balance: n }));
+            }}
+            className="neu-inset mt-1 min-h-[44px] w-full rounded-xl bg-transparent px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </label>
+        <label className="block">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Rentab. (%)</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            pattern="[0-9.,]*"
+            value={pct}
+            onFocus={() => { pctFocused.current = true; }}
+            onBlur={() => { pctFocused.current = false; }}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setPct(raw);
+              const n = parseFloat(raw.replace(",", "."));
+              if (!Number.isNaN(n)) debounce(() => onPatch({ monthly_return_pct: n }));
+            }}
+            className="neu-inset mt-1 min-h-[44px] w-full rounded-xl bg-transparent px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </label>
+      </div>
+    </div>
+  );
+}
