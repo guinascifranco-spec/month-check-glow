@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 import { InstallPWAButton } from "@/components/install-pwa-button";
 import { PageTabs } from "@/components/page-tabs";
+import { MobileNav } from "@/components/mobile-nav";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
@@ -182,23 +183,23 @@ function ParcelasPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-8">
+    <div className="min-h-screen px-4 pb-28 pt-6 sm:px-8 sm:py-8 lg:pb-8">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 items-center gap-3">
             <Logo height={40} />
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
               <p className="text-sm text-muted-foreground">Gastos parcelados</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <InstallPWAButton />
             <button
               onClick={signOut}
-              className="neu-pressable inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground"
+              className="neu-pressable inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground"
             >
-              <LogOut className="h-4 w-4" /> Sair
+              <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Sair</span>
             </button>
           </div>
         </header>
@@ -208,7 +209,7 @@ function ParcelasPage() {
         </div>
 
         {/* Limite mensal */}
-        <section className="neu-raised mb-6 rounded-2xl p-6">
+        <section className="neu-raised mb-6 rounded-2xl p-4 sm:p-6">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
             <div className="flex-1 min-w-[220px]">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -250,7 +251,7 @@ function ParcelasPage() {
         </section>
 
         {/* Resumo */}
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
           <SummaryCard label="Total comprometido" value={brl.format(totalCommitted)} />
           <SummaryCard
             label="Próximas a vencer (2 meses)"
@@ -265,7 +266,7 @@ function ParcelasPage() {
         </div>
 
         {/* Lista de ativas */}
-        <section className="neu-raised mb-6 rounded-2xl p-6">
+        <section className="neu-raised mb-6 rounded-2xl p-4 sm:p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -329,7 +330,7 @@ function ParcelasPage() {
         </section>
 
         {/* Histórico */}
-        <section className="neu-raised mb-8 rounded-2xl p-6">
+        <section className="neu-raised mb-8 rounded-2xl p-4 sm:p-6">
           <div className="mb-4 flex items-center gap-2">
             <History className="h-4 w-4 text-muted-foreground" />
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

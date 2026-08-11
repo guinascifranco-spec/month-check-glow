@@ -222,10 +222,10 @@ function ConferenciaPage() {
         {/* Mobile list */}
         <div className="space-y-3 md:hidden">
           {isLoading && (
-            <div className="neu-raised rounded-2xl p-6 text-center text-muted-foreground">Carregando...</div>
+            <div className="neu-raised rounded-2xl p-4 sm:p-6 text-center text-muted-foreground">Carregando...</div>
           )}
           {!isLoading && rows.length === 0 && (
-            <div className="neu-raised rounded-2xl p-6 text-center text-sm text-muted-foreground">
+            <div className="neu-raised rounded-2xl p-4 sm:p-6 text-center text-sm text-muted-foreground">
               Nenhuma linha. Adicione uma entrada ou saída.
             </div>
           )}
@@ -445,7 +445,7 @@ function SummaryCard({
 }: { label: string; value: number; tone: "success" | "danger"; emphasize?: boolean }) {
   const color = tone === "success" ? "text-primary" : "text-danger";
   return (
-    <div className={`neu-raised rounded-2xl p-6 ${emphasize ? "ring-2 ring-offset-2 ring-offset-background ring-primary/20" : ""}`}>
+    <div className={`neu-raised rounded-2xl p-4 sm:p-6 ${emphasize ? "ring-2 ring-offset-2 ring-offset-background ring-primary/20" : ""}`}>
       <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className={`mt-2 text-2xl font-bold sm:text-3xl ${color}`}>{brl.format(value)}</div>
     </div>
@@ -465,7 +465,7 @@ function MonthThermometer({ entradas, saidas }: { entradas: number; saidas: numb
   else if (rawPct >= 75) fillColor = "oklch(0.78 0.16 75)";
 
   return (
-    <div className="neu-raised mt-6 rounded-2xl p-6">
+    <div className="neu-raised mt-6 rounded-2xl p-4 sm:p-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -574,7 +574,7 @@ function YearLineChart({
   const totalSaidas = points.reduce((s, p) => s + p.saidas, 0);
 
   return (
-    <div className="neu-raised mt-6 rounded-2xl p-6" aria-label={`Gráfico anual de entradas e saídas em ${year}`}>
+    <div className="neu-raised mt-6 rounded-2xl p-4 sm:p-6" aria-label={`Gráfico anual de entradas e saídas em ${year}`}>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
