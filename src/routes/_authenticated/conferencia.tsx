@@ -289,24 +289,156 @@ function ConferenciaPage() {
 
 
         {/* Add buttons */}
-        <div className="mt-6 flex flex-wrap justify-end gap-3">
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:justify-end">
           <button
             onClick={() => addMutation.mutate("entrada")}
-            className="neu-pressable inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary"
+            className="neu-pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary"
           >
             <Plus className="h-4 w-4" /> Entrada
           </button>
           <button
             onClick={() => addMutation.mutate("saida")}
-            className="neu-pressable inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-secondary"
+            className="neu-pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-secondary"
           >
             <Plus className="h-4 w-4" /> Saída
           </button>
         </div>
       </div>
+      <MobileNav />
     </div>
   );
 }
+
+type RowPatch = { descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean };
+
+function RowCard({
+  row, onUpdate, onDelete, isDragging, onDragStart, onDragEnd, onDropRow,
+}: {
+  row: Row;
+  onUpdate: (patch: RowPatch) => void;
+  onDelete: () => void;
+  isDragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDropRow: () => void;
+}) {
+  const [descricao, setDescricao] = useState(row.descricao);
+  const [valor, setValor] = useState<string>(String(row.valor ?? 0));
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const descFocused = useRef(false);
+  const valorFocused = useRef(false);
+
+  useEffect(() => {
+    if (descFocused.current) return;
+    if (descricao !== row.descricao) setDescricao(row.descricao);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row.id, row.descricao]);
+  useEffect(() => {
+    if (valorFocused.current) return;
+    const localNum = parseFloat(valor.replace(",", ".")) || 0;
+    if (localNum !== Number(row.valor)) setValor(String(row.valor ?? 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row.id, row.valor]);
+
+  function scheduleSave(fn: () => void) {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(fn, 1000);
+  }
+  function commitDescricao() {
+    if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
+    if (descricao !== row.descricao) onUpdate({ descricao });
+  }
+  function commitValor() {
+    if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
+    const num = parseFloat(valor.replace(",", ".")) || 0;
+    if (num !== Number(row.valor)) onUpdate({ valor: num });
+  }
+  function changeTipo(novo: "entrada" | "saida") {
+    if (novo === row.tipo) return;
+    onUpdate({ tipo: novo, valor: 0 });
+  }
+
+  const isEntrada = row.tipo === "entrada";
+  const quitado = row.quitado;
+  const textCls = quitado ? "line-through" : "";
+
+  return (
+    <div
+      className={`neu-raised rounded-2xl p-4 ${isDragging ? "opacity-40" : ""} ${quitado ? "opacity-60" : ""}`}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={onDropRow}
+    >
+      <div className="flex items-center gap-2">
+        <div
+          draggable
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          className="flex h-11 w-6 shrink-0 cursor-grab items-center justify-center text-muted-foreground/60 active:cursor-grabbing"
+          aria-label="Arrastar para reordenar"
+        >
+          <GripVertical className="h-4 w-4" />
+        </div>
+        <input
+          value={descricao}
+          onFocus={() => { descFocused.current = true; }}
+          onChange={(e) => { setDescricao(e.target.value); scheduleSave(commitDescricao); }}
+          onBlur={() => { descFocused.current = false; commitDescricao(); }}
+          className={`neu-inset min-h-[44px] w-full min-w-0 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 ${textCls}`}
+          placeholder="Descrição"
+        />
+      </div>
+
+      <div className="mt-3 flex items-center gap-2">
+        <div className="neu-inset inline-flex shrink-0 rounded-full p-1">
+          <button
+            type="button"
+            onClick={() => changeTipo("entrada")}
+            className={`rounded-full px-3 py-2 text-xs font-semibold transition-all ${isEntrada ? "neu-raised-sm text-primary" : "text-muted-foreground"}`}
+          >
+            Entrada
+          </button>
+          <button
+            type="button"
+            onClick={() => changeTipo("saida")}
+            className={`rounded-full px-3 py-2 text-xs font-semibold transition-all ${!isEntrada ? "neu-raised-sm text-danger" : "text-muted-foreground"}`}
+          >
+            Saída
+          </button>
+        </div>
+        <input
+          type="text" inputMode="decimal" pattern="[0-9.,]*"
+          value={valor}
+          onFocus={() => { valorFocused.current = true; }}
+          onChange={(e) => { setValor(e.target.value); scheduleSave(commitValor); }}
+          onBlur={() => { valorFocused.current = false; commitValor(); }}
+          className={`neu-inset min-h-[44px] w-full min-w-0 rounded-lg px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-2 ${isEntrada ? "focus:ring-primary/40" : "focus:ring-danger/40"} ${textCls}`}
+          placeholder="0,00"
+        />
+      </div>
+
+      <div className="mt-3 flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => onUpdate({ quitado: !quitado })}
+          aria-pressed={quitado}
+          aria-label={quitado ? "Marcar como não quitado" : "Marcar como quitado"}
+          className={`neu-pressable inline-flex h-11 items-center gap-2 rounded-xl px-3 text-xs font-semibold ${quitado ? "text-primary" : "text-muted-foreground/70"}`}
+        >
+          <Check className="h-4 w-4" /> Quitado
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="neu-pressable inline-flex h-11 w-11 items-center justify-center rounded-xl text-danger"
+          aria-label="Excluir linha"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
 function SummaryCard({
   label, value, tone, emphasize,
