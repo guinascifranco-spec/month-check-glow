@@ -162,24 +162,24 @@ function ConferenciaPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-8">
+    <div className="min-h-screen px-4 pb-28 pt-6 sm:px-8 sm:py-8 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
-        <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:mb-8 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 items-center gap-3">
             <Logo height={40} />
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
-              <p className="text-sm text-muted-foreground">Conferência financeira mensal</p>
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
+              <p className="truncate text-sm text-muted-foreground">Conferência financeira mensal</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <InstallPWAButton />
             <button
               onClick={signOut}
-              className="neu-pressable inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground"
+              className="neu-pressable inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground"
             >
-              <LogOut className="h-4 w-4" /> Sair
+              <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Sair</span>
             </button>
           </div>
         </header>
@@ -192,20 +192,20 @@ function ConferenciaPage() {
 
         {/* Month selector */}
         <div className="neu-raised mb-6 flex items-center justify-between rounded-2xl p-4">
-          <button onClick={prevMonth} className="neu-pressable rounded-xl p-3 text-primary">
+          <button onClick={prevMonth} className="neu-pressable min-h-[44px] min-w-[44px] rounded-xl p-3 text-primary">
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <div className="text-center">
+          <div className="min-w-0 text-center">
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Período</div>
-            <div className="text-xl font-bold sm:text-2xl">{MESES[month - 1]} {year}</div>
+            <div className="truncate text-xl font-bold sm:text-2xl">{MESES[month - 1]} {year}</div>
           </div>
-          <button onClick={nextMonth} className="neu-pressable rounded-xl p-3 text-primary">
+          <button onClick={nextMonth} className="neu-pressable min-h-[44px] min-w-[44px] rounded-xl p-3 text-primary">
             <ChevronRight className="h-5 w-5" />
           </button>
         </div>
 
         {/* Summary cards */}
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:grid-cols-3 sm:gap-4">
           <SummaryCard label="Total Entradas" value={totals.entradas} tone="success" />
           <SummaryCard label="Total Saídas" value={totals.saidas} tone="danger" />
           <SummaryCard
@@ -216,8 +216,35 @@ function ConferenciaPage() {
           />
         </div>
 
+        {/* Saldo disponível por período */}
+        <PeriodBalanceCard saldo={totals.saldo} year={year} month={month} isLoading={isLoading} />
+
+        {/* Mobile list */}
+        <div className="space-y-3 md:hidden">
+          {isLoading && (
+            <div className="neu-raised rounded-2xl p-6 text-center text-muted-foreground">Carregando...</div>
+          )}
+          {!isLoading && rows.length === 0 && (
+            <div className="neu-raised rounded-2xl p-6 text-center text-sm text-muted-foreground">
+              Nenhuma linha. Adicione uma entrada ou saída.
+            </div>
+          )}
+          {rows.map((row) => (
+            <RowCard
+              key={row.id}
+              row={row}
+              isDragging={dragId === row.id}
+              onDragStart={() => setDragId(row.id)}
+              onDragEnd={() => setDragId(null)}
+              onDropRow={() => handleDrop(row.id)}
+              onUpdate={(patch) => updateMutation.mutate({ id: row.id, ...patch })}
+              onDelete={() => deleteMutation.mutate(row.id)}
+            />
+          ))}
+        </div>
+
         {/* Table */}
-        <div className="neu-raised overflow-hidden rounded-2xl">
+        <div className="neu-raised hidden overflow-hidden rounded-2xl md:block">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
