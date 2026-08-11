@@ -294,7 +294,24 @@ function VisaoGeralPage() {
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile: cards empilhados */}
+          <div className="space-y-3 md:hidden">
+            {investments.length === 0 && (
+              <div className="neu-inset rounded-xl p-6 text-center text-sm text-muted-foreground">
+                Nenhum investimento cadastrado.
+              </div>
+            )}
+            {investments.map((inv) => (
+              <InvestmentCard
+                key={inv.id}
+                investment={inv}
+                onPatch={(p) => updateMutation.mutate({ id: inv.id, ...p })}
+                onDelete={() => deleteMutation.mutate(inv.id)}
+              />
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
