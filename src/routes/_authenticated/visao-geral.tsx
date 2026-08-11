@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 import { InstallPWAButton } from "@/components/install-pwa-button";
 import { PageTabs } from "@/components/page-tabs";
+import { MobileNav } from "@/components/mobile-nav";
 import { Slider } from "@/components/ui/slider";
 import {
   addInvestment,
@@ -205,24 +206,24 @@ function VisaoGeralPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-8">
+    <div className="min-h-screen px-4 pb-28 pt-6 sm:px-8 sm:py-8 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 items-center gap-3">
             <Logo height={40} />
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
               <p className="text-sm text-muted-foreground">Visão geral do patrimônio</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <InstallPWAButton />
             <button
               onClick={signOut}
-              className="neu-pressable inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground"
+              className="neu-pressable inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground"
             >
-              <LogOut className="h-4 w-4" /> Sair
+              <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Sair</span>
             </button>
           </div>
         </header>
@@ -232,14 +233,14 @@ function VisaoGeralPage() {
         </div>
 
         {/* Balanço Geral cards */}
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
           <SummaryCard label="Saldo acumulado" value={saldoAcumulado} tone="primary" />
           <SummaryCard label="Total investido" value={totalInvestido} tone="secondary" />
           <SummaryCard label="Patrimônio total" value={patrimonioTotal} tone="primary" emphasize />
         </div>
 
         {/* Histórico */}
-        <section className="neu-raised mb-8 rounded-2xl p-6">
+        <section className="neu-raised mb-8 rounded-2xl p-4 sm:p-6">
           <div className="mb-4">
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Balanço Geral
@@ -251,7 +252,7 @@ function VisaoGeralPage() {
           {histData.length === 0 ? (
             <EmptyChart text="Lance entradas e saídas na Conferência para visualizar o histórico." />
           ) : (
-            <div className="h-80 w-full">
+            <div className="h-56 w-full sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={histData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
@@ -275,7 +276,7 @@ function VisaoGeralPage() {
         </section>
 
         {/* Investimentos */}
-        <section className="neu-raised mb-8 rounded-2xl p-6">
+        <section className="neu-raised mb-8 rounded-2xl p-4 sm:p-6">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -293,7 +294,24 @@ function VisaoGeralPage() {
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile: cards empilhados */}
+          <div className="space-y-3 md:hidden">
+            {investments.length === 0 && (
+              <div className="neu-inset rounded-xl p-6 text-center text-sm text-muted-foreground">
+                Nenhum investimento cadastrado.
+              </div>
+            )}
+            {investments.map((inv) => (
+              <InvestmentCard
+                key={inv.id}
+                investment={inv}
+                onPatch={(p) => updateMutation.mutate({ id: inv.id, ...p })}
+                onDelete={() => deleteMutation.mutate(inv.id)}
+              />
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -326,7 +344,7 @@ function VisaoGeralPage() {
         </section>
 
         {/* Projeção */}
-        <section className="neu-raised mb-8 rounded-2xl p-6">
+        <section className="neu-raised mb-8 rounded-2xl p-4 sm:p-6">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -401,7 +419,7 @@ function VisaoGeralPage() {
           {monthly.length === 0 ? (
             <EmptyChart text="Lance ao menos um mês na Conferência para gerar a projeção." />
           ) : (
-            <div className="h-80 w-full">
+            <div className="h-56 w-full sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={projData.data} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
                   <defs>
@@ -441,7 +459,7 @@ function VisaoGeralPage() {
             </div>
           )}
 
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
             <SummaryCard label="Patrimônio projetado" value={projData.finalValue} tone="primary" emphasize />
             <SummaryCard label="Ganho projetado" value={ganhoProjetado} tone={ganhoProjetado >= 0 ? "primary" : "danger"} />
             <SummaryCard
@@ -452,6 +470,7 @@ function VisaoGeralPage() {
           </div>
         </section>
       </div>
+      <MobileNav />
     </div>
   );
 }
@@ -471,7 +490,7 @@ function SummaryCard({
     tone === "primary" ? "text-primary" : tone === "secondary" ? "text-secondary" : "text-danger";
   return (
     <div
-      className={`neu-raised rounded-2xl p-6 ${
+      className={`neu-raised rounded-2xl p-4 sm:p-6 ${
         emphasize ? "ring-2 ring-offset-2 ring-offset-background ring-primary/20" : ""
       }`}
     >
@@ -587,5 +606,105 @@ function InvestmentRow({
         </button>
       </td>
     </tr>
+  );
+}
+
+function InvestmentCard({
+  investment,
+  onPatch,
+  onDelete,
+}: {
+  investment: Investment;
+  onPatch: (p: { category?: string; balance?: number; monthly_return_pct?: number }) => void;
+  onDelete: () => void;
+}) {
+  const [category, setCategory] = useState(investment.category);
+  const [balance, setBalance] = useState(String(investment.balance ?? 0));
+  const [pct, setPct] = useState(String(investment.monthly_return_pct ?? 0));
+  const catFocused = useRef(false);
+  const balFocused = useRef(false);
+  const pctFocused = useRef(false);
+
+  useEffect(() => {
+    if (!catFocused.current && category !== investment.category) setCategory(investment.category);
+    if (!balFocused.current) {
+      const n = parseFloat(balance.replace(",", ".")) || 0;
+      if (n !== Number(investment.balance)) setBalance(String(investment.balance ?? 0));
+    }
+    if (!pctFocused.current) {
+      const n = parseFloat(pct.replace(",", ".")) || 0;
+      if (n !== Number(investment.monthly_return_pct)) setPct(String(investment.monthly_return_pct ?? 0));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [investment.id, investment.category, investment.balance, investment.monthly_return_pct]);
+
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounce = (fn: () => void) => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(fn, 1000);
+  };
+
+  return (
+    <div className="neu-raised rounded-2xl p-4">
+      <div className="flex items-center gap-2">
+        <input
+          value={category}
+          onFocus={() => { catFocused.current = true; }}
+          onBlur={() => { catFocused.current = false; }}
+          onChange={(e) => {
+            setCategory(e.target.value);
+            const v = e.target.value;
+            debounce(() => onPatch({ category: v }));
+          }}
+          placeholder="Renda Fixa, Ações…"
+          className="neu-inset min-h-[44px] w-full min-w-0 rounded-xl bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        <button
+          onClick={onDelete}
+          className="neu-pressable inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-danger"
+          aria-label="Remover investimento"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Saldo (R$)</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            pattern="[0-9.,]*"
+            value={balance}
+            onFocus={() => { balFocused.current = true; }}
+            onBlur={() => { balFocused.current = false; }}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setBalance(raw);
+              const n = parseFloat(raw.replace(",", "."));
+              if (!Number.isNaN(n)) debounce(() => onPatch({ balance: n }));
+            }}
+            className="neu-inset mt-1 min-h-[44px] w-full rounded-xl bg-transparent px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </label>
+        <label className="block">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Rentab. (%)</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            pattern="[0-9.,]*"
+            value={pct}
+            onFocus={() => { pctFocused.current = true; }}
+            onBlur={() => { pctFocused.current = false; }}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setPct(raw);
+              const n = parseFloat(raw.replace(",", "."));
+              if (!Number.isNaN(n)) debounce(() => onPatch({ monthly_return_pct: n }));
+            }}
+            className="neu-inset mt-1 min-h-[44px] w-full rounded-xl bg-transparent px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </label>
+      </div>
+    </div>
   );
 }

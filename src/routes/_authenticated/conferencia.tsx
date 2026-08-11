@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 import { InstallPWAButton } from "@/components/install-pwa-button";
 import { PageTabs } from "@/components/page-tabs";
+import { MobileNav } from "@/components/mobile-nav";
+import { PeriodBalanceCard } from "@/components/period-balance-card";
 import {
   getMonthRows,
   addRow,
@@ -160,24 +162,24 @@ function ConferenciaPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-8">
+    <div className="min-h-screen px-4 pb-28 pt-6 sm:px-8 sm:py-8 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
-        <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:mb-8 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 items-center gap-3">
             <Logo height={40} />
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
-              <p className="text-sm text-muted-foreground">Conferência financeira mensal</p>
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
+              <p className="truncate text-sm text-muted-foreground">Conferência financeira mensal</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <InstallPWAButton />
             <button
               onClick={signOut}
-              className="neu-pressable inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground"
+              className="neu-pressable inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground"
             >
-              <LogOut className="h-4 w-4" /> Sair
+              <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Sair</span>
             </button>
           </div>
         </header>
@@ -190,20 +192,20 @@ function ConferenciaPage() {
 
         {/* Month selector */}
         <div className="neu-raised mb-6 flex items-center justify-between rounded-2xl p-4">
-          <button onClick={prevMonth} className="neu-pressable rounded-xl p-3 text-primary">
+          <button onClick={prevMonth} className="neu-pressable min-h-[44px] min-w-[44px] rounded-xl p-3 text-primary">
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <div className="text-center">
+          <div className="min-w-0 text-center">
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Período</div>
-            <div className="text-xl font-bold sm:text-2xl">{MESES[month - 1]} {year}</div>
+            <div className="truncate text-xl font-bold sm:text-2xl">{MESES[month - 1]} {year}</div>
           </div>
-          <button onClick={nextMonth} className="neu-pressable rounded-xl p-3 text-primary">
+          <button onClick={nextMonth} className="neu-pressable min-h-[44px] min-w-[44px] rounded-xl p-3 text-primary">
             <ChevronRight className="h-5 w-5" />
           </button>
         </div>
 
         {/* Summary cards */}
-        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:grid-cols-3 sm:gap-4">
           <SummaryCard label="Total Entradas" value={totals.entradas} tone="success" />
           <SummaryCard label="Total Saídas" value={totals.saidas} tone="danger" />
           <SummaryCard
@@ -214,8 +216,35 @@ function ConferenciaPage() {
           />
         </div>
 
+        {/* Saldo disponível por período */}
+        <PeriodBalanceCard saldo={totals.saldo} year={year} month={month} isLoading={isLoading} />
+
+        {/* Mobile list */}
+        <div className="space-y-3 md:hidden">
+          {isLoading && (
+            <div className="neu-raised rounded-2xl p-4 sm:p-6 text-center text-muted-foreground">Carregando...</div>
+          )}
+          {!isLoading && rows.length === 0 && (
+            <div className="neu-raised rounded-2xl p-4 sm:p-6 text-center text-sm text-muted-foreground">
+              Nenhuma linha. Adicione uma entrada ou saída.
+            </div>
+          )}
+          {rows.map((row) => (
+            <RowCard
+              key={row.id}
+              row={row}
+              isDragging={dragId === row.id}
+              onDragStart={() => setDragId(row.id)}
+              onDragEnd={() => setDragId(null)}
+              onDropRow={() => handleDrop(row.id)}
+              onUpdate={(patch) => updateMutation.mutate({ id: row.id, ...patch })}
+              onDelete={() => deleteMutation.mutate(row.id)}
+            />
+          ))}
+        </div>
+
         {/* Table */}
-        <div className="neu-raised overflow-hidden rounded-2xl">
+        <div className="neu-raised hidden overflow-hidden rounded-2xl md:block">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -260,31 +289,163 @@ function ConferenciaPage() {
 
 
         {/* Add buttons */}
-        <div className="mt-6 flex flex-wrap justify-end gap-3">
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:justify-end">
           <button
             onClick={() => addMutation.mutate("entrada")}
-            className="neu-pressable inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary"
+            className="neu-pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-primary"
           >
             <Plus className="h-4 w-4" /> Entrada
           </button>
           <button
             onClick={() => addMutation.mutate("saida")}
-            className="neu-pressable inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-secondary"
+            className="neu-pressable inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-secondary"
           >
             <Plus className="h-4 w-4" /> Saída
           </button>
         </div>
       </div>
+      <MobileNav />
     </div>
   );
 }
+
+type RowPatch = { descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean };
+
+function RowCard({
+  row, onUpdate, onDelete, isDragging, onDragStart, onDragEnd, onDropRow,
+}: {
+  row: Row;
+  onUpdate: (patch: RowPatch) => void;
+  onDelete: () => void;
+  isDragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDropRow: () => void;
+}) {
+  const [descricao, setDescricao] = useState(row.descricao);
+  const [valor, setValor] = useState<string>(String(row.valor ?? 0));
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const descFocused = useRef(false);
+  const valorFocused = useRef(false);
+
+  useEffect(() => {
+    if (descFocused.current) return;
+    if (descricao !== row.descricao) setDescricao(row.descricao);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row.id, row.descricao]);
+  useEffect(() => {
+    if (valorFocused.current) return;
+    const localNum = parseFloat(valor.replace(",", ".")) || 0;
+    if (localNum !== Number(row.valor)) setValor(String(row.valor ?? 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [row.id, row.valor]);
+
+  function scheduleSave(fn: () => void) {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(fn, 1000);
+  }
+  function commitDescricao() {
+    if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
+    if (descricao !== row.descricao) onUpdate({ descricao });
+  }
+  function commitValor() {
+    if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
+    const num = parseFloat(valor.replace(",", ".")) || 0;
+    if (num !== Number(row.valor)) onUpdate({ valor: num });
+  }
+  function changeTipo(novo: "entrada" | "saida") {
+    if (novo === row.tipo) return;
+    onUpdate({ tipo: novo, valor: 0 });
+  }
+
+  const isEntrada = row.tipo === "entrada";
+  const quitado = row.quitado;
+  const textCls = quitado ? "line-through" : "";
+
+  return (
+    <div
+      className={`neu-raised rounded-2xl p-4 ${isDragging ? "opacity-40" : ""} ${quitado ? "opacity-60" : ""}`}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={onDropRow}
+    >
+      <div className="flex items-center gap-2">
+        <div
+          draggable
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          className="flex h-11 w-6 shrink-0 cursor-grab items-center justify-center text-muted-foreground/60 active:cursor-grabbing"
+          aria-label="Arrastar para reordenar"
+        >
+          <GripVertical className="h-4 w-4" />
+        </div>
+        <input
+          value={descricao}
+          onFocus={() => { descFocused.current = true; }}
+          onChange={(e) => { setDescricao(e.target.value); scheduleSave(commitDescricao); }}
+          onBlur={() => { descFocused.current = false; commitDescricao(); }}
+          className={`neu-inset min-h-[44px] w-full min-w-0 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 ${textCls}`}
+          placeholder="Descrição"
+        />
+      </div>
+
+      <div className="mt-3 flex items-center gap-2">
+        <div className="neu-inset inline-flex shrink-0 rounded-full p-1">
+          <button
+            type="button"
+            onClick={() => changeTipo("entrada")}
+            className={`rounded-full px-3 py-2 text-xs font-semibold transition-all ${isEntrada ? "neu-raised-sm text-primary" : "text-muted-foreground"}`}
+          >
+            Entrada
+          </button>
+          <button
+            type="button"
+            onClick={() => changeTipo("saida")}
+            className={`rounded-full px-3 py-2 text-xs font-semibold transition-all ${!isEntrada ? "neu-raised-sm text-danger" : "text-muted-foreground"}`}
+          >
+            Saída
+          </button>
+        </div>
+        <input
+          type="text" inputMode="decimal" pattern="[0-9.,]*"
+          value={valor}
+          onFocus={() => { valorFocused.current = true; }}
+          onChange={(e) => { setValor(e.target.value); scheduleSave(commitValor); }}
+          onBlur={() => { valorFocused.current = false; commitValor(); }}
+          className={`neu-inset min-h-[44px] w-full min-w-0 rounded-lg px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-2 ${isEntrada ? "focus:ring-primary/40" : "focus:ring-danger/40"} ${textCls}`}
+          placeholder="0,00"
+        />
+      </div>
+
+      <div className="mt-3 flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => onUpdate({ quitado: !quitado })}
+          aria-pressed={quitado}
+          aria-label={quitado ? "Marcar como não quitado" : "Marcar como quitado"}
+          className={`neu-pressable inline-flex h-11 items-center gap-2 rounded-xl px-3 text-xs font-semibold ${quitado ? "text-primary" : "text-muted-foreground/70"}`}
+        >
+          <Check className="h-4 w-4" /> Quitado
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="neu-pressable inline-flex h-11 w-11 items-center justify-center rounded-xl text-danger"
+          aria-label="Excluir linha"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
 function SummaryCard({
   label, value, tone, emphasize,
 }: { label: string; value: number; tone: "success" | "danger"; emphasize?: boolean }) {
   const color = tone === "success" ? "text-primary" : "text-danger";
   return (
-    <div className={`neu-raised rounded-2xl p-6 ${emphasize ? "ring-2 ring-offset-2 ring-offset-background ring-primary/20" : ""}`}>
+    <div className={`neu-raised rounded-2xl p-4 sm:p-6 ${emphasize ? "ring-2 ring-offset-2 ring-offset-background ring-primary/20" : ""}`}>
       <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className={`mt-2 text-2xl font-bold sm:text-3xl ${color}`}>{brl.format(value)}</div>
     </div>
@@ -304,7 +465,7 @@ function MonthThermometer({ entradas, saidas }: { entradas: number; saidas: numb
   else if (rawPct >= 75) fillColor = "oklch(0.78 0.16 75)";
 
   return (
-    <div className="neu-raised mt-6 rounded-2xl p-6">
+    <div className="neu-raised mt-6 rounded-2xl p-4 sm:p-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -413,7 +574,7 @@ function YearLineChart({
   const totalSaidas = points.reduce((s, p) => s + p.saidas, 0);
 
   return (
-    <div className="neu-raised mt-6 rounded-2xl p-6" aria-label={`Gráfico anual de entradas e saídas em ${year}`}>
+    <div className="neu-raised mt-6 rounded-2xl p-4 sm:p-6" aria-label={`Gráfico anual de entradas e saídas em ${year}`}>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

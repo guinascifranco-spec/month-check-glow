@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 import { InstallPWAButton } from "@/components/install-pwa-button";
 import { PageTabs } from "@/components/page-tabs";
+import { MobileNav } from "@/components/mobile-nav";
 import {
   Dialog,
   DialogContent,
@@ -256,23 +257,23 @@ function InvestimentosPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-8 sm:px-8">
+    <div className="min-h-screen px-4 pb-28 pt-6 sm:px-8 sm:py-8 lg:pb-8">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 items-center gap-3">
             <Logo height={40} />
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
               <p className="text-sm text-muted-foreground">Investimentos</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <InstallPWAButton />
             <button
               onClick={signOut}
-              className="neu-pressable inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground"
+              className="neu-pressable inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground"
             >
-              <LogOut className="h-4 w-4" /> Sair
+              <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Sair</span>
             </button>
           </div>
         </header>
@@ -282,7 +283,7 @@ function InvestimentosPage() {
         </div>
 
         {/* Resumo */}
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <SummaryCard
             icon={<Wallet className="h-4 w-4" />}
             label="Patrimônio investido"
@@ -323,7 +324,7 @@ function InvestimentosPage() {
         </div>
 
         {/* Gráfico */}
-        <section className="neu-raised mb-6 rounded-2xl p-6">
+        <section className="neu-raised mb-6 rounded-2xl p-4 sm:p-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -352,7 +353,7 @@ function InvestimentosPage() {
               Registre aportes para ver a evolução do patrimônio.
             </div>
           ) : (
-            <div className="h-72 w-full">
+            <div className="h-52 w-full sm:h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <defs>
@@ -394,7 +395,7 @@ function InvestimentosPage() {
         </section>
 
         {/* Ativos agrupados */}
-        <section className="neu-raised mb-6 rounded-2xl p-6">
+        <section className="neu-raised mb-6 rounded-2xl p-4 sm:p-6">
           <div className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Meus ativos
           </div>
@@ -449,7 +450,7 @@ function InvestimentosPage() {
         </section>
 
         {/* Aportes */}
-        <section className="neu-raised mb-6 rounded-2xl p-6">
+        <section className="neu-raised mb-6 rounded-2xl p-4 sm:p-6">
           <div className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Aportes recentes
           </div>
@@ -491,7 +492,7 @@ function InvestimentosPage() {
         </section>
 
         {/* Proventos */}
-        <section className="neu-raised mb-8 rounded-2xl p-6">
+        <section className="neu-raised mb-8 rounded-2xl p-4 sm:p-6">
           <div className="mb-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Proventos
           </div>
@@ -570,6 +571,7 @@ function InvestimentosPage() {
           setOpenProvento(false);
         }}
       />
+      <MobileNav />
     </div>
   );
 }
@@ -586,7 +588,7 @@ function SummaryCard({
   sub?: string;
 }) {
   return (
-    <div className="neu-raised rounded-2xl p-5">
+    <div className="neu-raised rounded-2xl p-4 sm:p-5">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {icon}
         {label}
