@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 import { InstallPWAButton } from "@/components/install-pwa-button";
 import { PageTabs } from "@/components/page-tabs";
+import { MobileNav } from "@/components/mobile-nav";
+import { PeriodBalanceCard } from "@/components/period-balance-card";
 import {
   getMonthRows,
   addRow,
