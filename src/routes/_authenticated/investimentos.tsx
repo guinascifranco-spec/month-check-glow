@@ -571,6 +571,7 @@ function InvestimentosPage() {
           setOpenProvento(false);
         }}
       />
+      <MobileNav />
     </div>
   );
 }
@@ -587,7 +588,7 @@ function SummaryCard({
   sub?: string;
 }) {
   return (
-    <div className="neu-raised rounded-2xl p-5">
+    <div className="neu-raised rounded-2xl p-4 sm:p-5">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {icon}
         {label}

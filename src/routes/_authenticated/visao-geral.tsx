@@ -453,6 +453,7 @@ function VisaoGeralPage() {
           </div>
         </section>
       </div>
+      <MobileNav />
     </div>
   );
 }
