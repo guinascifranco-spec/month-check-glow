@@ -1,55 +1,69 @@
-## Causa raiz
+# Saldo por período + responsividade mobile
 
-Os inputs monetários mantêm um estado local `valor: string`, mas um `useEffect` sincroniza esse estado toda vez que `row.valor` muda:
+## 1. Card "Saldo disponível por período" (Conferência)
 
-```ts
-useEffect(() => { setValor(String(row.valor ?? 0)); }, [row.valor]);
-```
+Novo card logo abaixo dos cards de resumo (Entradas, Saídas, Saldo do mês).
 
-Fluxo do bug quando o usuário digita rápido "1500,75":
-1. A cada tecla, `scheduleSave` reinicia o debounce (1 s).
-2. Se o usuário pausa por >1 s em "1500,7", `commitValor` faz `parseFloat` → salva 1500.7.
-3. A mutation invalida a query, `row.valor` vira 1500.7.
-4. O `useEffect` roda `setValor("1500.7")` — substitui o que estava no input, cursor pula, o próximo caractere digitado (o "5") é aplicado sobre a string reescrita e "some".
-5. Idem com `type="number"` + vírgula: "12," vira `parseFloat`=12 → commit → effect reescreve como "12" e a vírgula desaparece.
+Cálculo:
+- Saldo = total de entradas − total de saídas do mês exibido.
+- Dias restantes = do dia de hoje até o último dia do mês (incluindo hoje).
+- Semanas restantes = dias restantes ÷ 7 arredondado para baixo, mínimo 1.
+- Se hoje for o último dia do mês: mostra "Último dia do mês".
+- Quando o mês exibido não é o mês corrente (navegação para outro mês), o card usa o total de dias daquele mês como base e indica que é uma referência do mês inteiro.
 
-O mesmo padrão existe em `InvestmentRow` (visão-geral) e no input de "Limite mensal" (parcelas). Nos modais (Nova Compra, aportes, proventos) o estado já é string e não há sync, então não são afetados — mas ainda usam `type="number"` que rejeita vírgula em alguns browsers.
+Layout:
+- Título "Saldo disponível por período" + subtítulo cinza "Faltam X dias para o fim do mês".
+- Dois sub-cards neumórficos lado a lado (grid-cols-2 também no mobile):
+  - Por dia — ícone CalendarDays, valor saldo ÷ dias restantes, auxiliar "para os próximos X dias".
+  - Por semana — ícone CalendarRange, valor saldo ÷ semanas restantes, auxiliar "para as próximas X semanas" / "próxima semana".
 
-## Correção
+Cores e estados:
+- Positivo: verde (token success/primary).
+- Negativo: vermelho + aviso "⚠️ Saldo negativo — revise seus gastos".
+- Zero: cinza + "Saldo zerado para este mês".
+- Skeleton neumórfico enquanto os dados do mês carregam.
 
-1. **`RowItem` em `src/routes/_authenticated/conferencia.tsx`**
-   - Não usar `useEffect([row.valor])` para regravar o input. Sincronizar `valor` **apenas quando o id da row muda** (ou quando o input não está focado E o número parseado do estado local difere do `row.valor`).
-   - Guardar `isFocused` via `onFocus`/`onBlur`; enquanto focado, nunca sobrescrever.
-   - Trocar o `type="number"` dos dois campos de valor por `type="text"` com `inputMode="decimal"` e `pattern="[0-9.,]*"`, aceitando vírgula/ponto sem perder caracteres intermediários.
-   - Mesma abordagem para o campo `descricao` (usar sync por `row.id`, não por `row.descricao`).
+## 2. Responsividade mobile (375–430px)
 
-2. **`InvestmentRow` em `src/routes/_authenticated/visao-geral.tsx`**
-   - Já sincroniza por `investment.id` (bom). Trocar os dois `type="number"` (saldo e %) por `type="text"` + `inputMode="decimal"` para não perder vírgula. Fazer a conversão com `parseFloat(v.replace(",", "."))` no debounce.
+Aplicada às quatro páginas existentes: Conferência, Visão Geral, Parcelas, Investimentos.
 
-3. **Limite mensal em `src/routes/_authenticated/parcelas.tsx`**
-   - `useEffect(() => setLimitInput(...), [settings?.monthly_limit])` tem o mesmo problema: após 1 s de debounce, a query é invalidada e o input é reescrito. Sincronizar só quando o input não está focado. Manter o `type="number"` aqui é aceitável (campo único, sem vírgula problemática), mas ainda evitar o overwrite durante o foco.
+Navegação:
+- Barra fixa inferior no mobile com ícones + rótulos curtos (Conferência, Visão, Parcelas, Invest.), item ativo em destaque, respeitando a safe-area do iPhone.
+- Abas atuais no topo continuam a partir de `lg:`.
+- Espaçamento extra no fim das páginas para o conteúdo não ficar sob a barra.
 
-4. **Modais (Nova Compra, Novo Aporte, Novo Provento, Novo Ativo)**
-   - Trocar `type="number"` dos campos monetários por `type="text"` + `inputMode="decimal"` para permitir digitar vírgula sem que o browser descarte o caractere. Já são estado string e conversão só no submit — só falta a máscara input mode.
+Conferência:
+- Cards de resumo em grid-cols-2 no mobile.
+- Tabela de lançamentos vira cards empilhados no mobile (descrição, valor, tipo, quitado, arrastar, excluir), tabela mantida a partir de `md:`.
+- Gráficos com altura reduzida (~200px) e largura total no mobile.
+
+Visão Geral:
+- Cards de patrimônio em grid-cols-2 no mobile.
+- Tabela de investimentos vira cards empilhados (categoria, saldo, rendimento %) com ações como ícones compactos à direita.
+- Gráficos em 100% da largura com altura reduzida.
+
+Parcelas:
+- Cards de resumo em grid-cols-2; barra de limite em largura total.
+- Compras ativas e histórico como cards empilhados, um por linha, com informações compactas.
+
+Investimentos:
+- Cards de dashboard em grid-cols-2 no mobile.
+- Listas de ativos/aportes/proventos como cards empilhados, com badge de tipo e ações em ícones.
+- Gráfico de evolução com altura reduzida no mobile.
+
+Modais:
+- Todos os diálogos abrem como bottom sheet no mobile (deslizando de baixo, até 90% da altura, cantos arredondados no topo, conteúdo rolável) e como modal centralizado no desktop.
+- Botões confirmar/cancelar fixos no rodapé do sheet.
+
+Tipografia, toque e espaçamento:
+- Padding dos cards p-4 no mobile, p-6 a partir de `sm:`.
+- Títulos text-xl no mobile / text-2xl no desktop; valores principais text-2xl / text-3xl.
+- Botões, inputs e selects com altura mínima de 44px no mobile.
+- Nenhum scroll horizontal: containers de texto com `min-w-0`/`truncate`, ícones com `shrink-0`, cabeçalhos em grid duas colunas no mobile.
 
 ## Detalhes técnicos
 
-Padrão de sync seguro para inputs controlados com debounce:
-
-```ts
-const [valor, setValor] = useState(String(row.valor ?? 0));
-const focusedRef = useRef(false);
-useEffect(() => {
-  if (focusedRef.current) return;
-  const localNum = parseFloat(valor.replace(",", ".")) || 0;
-  if (localNum !== Number(row.valor)) setValor(String(row.valor ?? 0));
-}, [row.valor, row.id]);
-```
-
-Não vou adicionar `react-number-format` — resolvemos com input `text` + `inputMode="decimal"`, mantendo a stack enxuta. Se depois o usuário quiser máscara "R$ 1.234,56" formatada, aí sim usamos a lib.
-
-## Verificação
-
-- Digitar "1500,75" rapidamente em cada campo (Conferência, Investimentos, Limite, modais) e conferir que nenhum caractere é perdido e a vírgula é aceita.
-- Confirmar que o auto-save ainda dispara ~1 s após a última tecla e persiste o valor correto.
-- Rebuild sem erros de tipo.
+- Novo componente `src/components/mobile-nav.tsx` (barra inferior) usando `Link` do TanStack Router; `PageTabs` recebe `hidden lg:inline-flex`.
+- Novo componente `src/components/period-balance-card.tsx`, puro em props (saldo + data de referência), sem chamadas ao backend.
+- Componente auxiliar de responsividade nos diálogos: classes condicionais no `DialogContent` (`max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:max-h-[90vh] ...`) — sem trocar de biblioteca.
+- Sem alterações de banco de dados nem de server functions; todo o trabalho é de UI.
