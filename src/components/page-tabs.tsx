@@ -10,7 +10,7 @@ const tabs = [
 export function PageTabs() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <nav className="neu-inset inline-flex rounded-2xl p-1">
+    <nav className="neu-inset hidden rounded-2xl p-1 lg:inline-flex">
       {tabs.map((t) => {
         const active = pathname === t.to;
         return (
