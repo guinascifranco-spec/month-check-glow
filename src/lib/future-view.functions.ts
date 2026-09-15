@@ -3,6 +3,14 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type MonthKey = `${number}-${string}`;
+type ProjectionEvent = {
+  id: string;
+  kind: "installment" | "critical";
+  year: number;
+  month: number;
+  title: string;
+  message: string;
+};
 
 function monthKey(year: number, month: number): MonthKey {
   return `${year}-${String(month).padStart(2, "0")}`;
@@ -102,7 +110,7 @@ export const getFutureProjection = createServerFn({ method: "POST" })
     });
 
     const lastPeriod = shiftMonth(startYear, startMonth, data.months - 1);
-    const events = (installments ?? []).flatMap((item) => {
+    const events: ProjectionEvent[] = (installments ?? []).flatMap((item) => {
       const [firstYear, firstMonth] = item.first_date.split("-").map(Number);
       const end = shiftMonth(firstYear, firstMonth, item.total_installments - 1);
       const offset = monthDistance(startYear, startMonth, end.year, end.month);
