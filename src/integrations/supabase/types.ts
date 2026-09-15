@@ -188,6 +188,7 @@ export type Database = {
         Row: {
           created_at: string
           descricao: string
+          expense_class: string
           id: string
           month: number
           position: number
@@ -201,6 +202,7 @@ export type Database = {
         Insert: {
           created_at?: string
           descricao?: string
+          expense_class?: string
           id?: string
           month: number
           position?: number
@@ -214,6 +216,7 @@ export type Database = {
         Update: {
           created_at?: string
           descricao?: string
+          expense_class?: string
           id?: string
           month?: number
           position?: number

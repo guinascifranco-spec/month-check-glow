@@ -18,6 +18,10 @@ const DEFAULT_TEMPLATE: Array<{ descricao: string; tipo: "entrada" | "saida" }> 
   { descricao: "Psicólogo", tipo: "saida" },
 ];
 
+const FIXED_DEFAULTS = new Set([
+  "Aluguel", "Condomínio", "Energia", "Internet e Celular", "Água", "Gás", "Lavanderia", "Psicólogo",
+]);
+
 const periodSchema = z.object({
   year: z.number().int().min(1970).max(3000),
   month: z.number().int().min(1).max(12),
@@ -51,6 +55,7 @@ export const getMonthRows = createServerFn({ method: "POST" })
       tipo: t.tipo,
       valor: 0,
       position: i,
+      expense_class: t.tipo === "saida" && FIXED_DEFAULTS.has(t.descricao) ? "fixo" : "variavel",
     }));
     const { data: inserted, error: insErr } = await supabase
       .from("month_check_rows")
@@ -92,6 +97,7 @@ export const addRow = createServerFn({ method: "POST" })
         descricao: "",
         valor: 0,
         position: nextPos,
+        expense_class: "variavel",
       })
       .select("*")
       .single();
@@ -107,6 +113,7 @@ export const updateRow = createServerFn({ method: "POST" })
     tipo?: "entrada" | "saida";
     valor?: number;
     quitado?: boolean;
+    expense_class?: "fixo" | "variavel";
   }) =>
     z.object({
       id: z.string().uuid(),
@@ -114,15 +121,17 @@ export const updateRow = createServerFn({ method: "POST" })
       tipo: z.enum(["entrada", "saida"]).optional(),
       valor: z.number().optional(),
       quitado: z.boolean().optional(),
+      expense_class: z.enum(["fixo", "variavel"]).optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const patch: { descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean } = {};
+    const patch: { descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean; expense_class?: "fixo" | "variavel" } = {};
     if (data.descricao !== undefined) patch.descricao = data.descricao;
     if (data.tipo !== undefined) patch.tipo = data.tipo;
     if (data.valor !== undefined) patch.valor = data.valor;
     if (data.quitado !== undefined) patch.quitado = data.quitado;
+    if (data.expense_class !== undefined) patch.expense_class = data.expense_class;
     const { data: row, error } = await supabase
       .from("month_check_rows")
       .update(patch)

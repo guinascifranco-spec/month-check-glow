@@ -1,11 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ListChecks, LayoutDashboard, CreditCard, TrendingUp } from "lucide-react";
+import { ListChecks, LayoutDashboard, CreditCard, TrendingUp, Telescope } from "lucide-react";
 
 const items = [
   { to: "/conferencia", label: "Conferência", Icon: ListChecks },
   { to: "/visao-geral", label: "Visão", Icon: LayoutDashboard },
   { to: "/parcelas", label: "Parcelas", Icon: CreditCard },
   { to: "/investimentos", label: "Invest.", Icon: TrendingUp },
+  { to: "/visao-futura", label: "Futuro", Icon: Telescope },
 ] as const;
 
 export function MobileNav() {
@@ -16,7 +17,7 @@ export function MobileNav() {
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       aria-label="Navegação principal"
     >
-      <div className="grid grid-cols-4">
+      <div className="grid grid-cols-5">
         {items.map(({ to, label, Icon }) => {
           const active = pathname === to;
           return (

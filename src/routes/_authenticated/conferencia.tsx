@@ -36,6 +36,7 @@ type Row = {
   valor: number;
   position: number;
   quitado: boolean;
+  expense_class: "fixo" | "variavel";
 };
 
 const MESES = [
@@ -98,7 +99,7 @@ function ConferenciaPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (patch: { id: string; descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean }) =>
+    mutationFn: (patch: { id: string; descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean; expense_class?: "fixo" | "variavel" }) =>
       updateRowFn({ data: patch }),
     onMutate: async (patch) => {
       await queryClient.cancelQueries({ queryKey });
@@ -252,6 +253,7 @@ function ConferenciaPage() {
                   <th className="w-8 px-2 py-4"></th>
                   <th className="px-4 py-4">Descrição</th>
                   <th className="px-4 py-4">Tipo</th>
+                  <th className="px-4 py-4">Categoria</th>
                   <th className="px-4 py-4 text-right">Entrada (R$)</th>
                   <th className="px-4 py-4 text-right">Saída (R$)</th>
                   <th className="px-4 py-4 text-center">Quitado</th>
@@ -260,10 +262,10 @@ function ConferenciaPage() {
               </thead>
               <tbody>
                 {isLoading && (
-                  <tr><td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">Carregando...</td></tr>
+                  <tr><td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Carregando...</td></tr>
                 )}
                 {!isLoading && rows.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">Nenhuma linha. Adicione uma entrada ou saída.</td></tr>
+                  <tr><td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Nenhuma linha. Adicione uma entrada ou saída.</td></tr>
                 )}
                 {rows.map((row) => (
                   <RowItem
@@ -309,7 +311,7 @@ function ConferenciaPage() {
   );
 }
 
-type RowPatch = { descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean };
+type RowPatch = { descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean; expense_class?: "fixo" | "variavel" };
 
 function RowCard({
   row, onUpdate, onDelete, isDragging, onDragStart, onDragEnd, onDropRow,
@@ -415,6 +417,21 @@ function RowCard({
           placeholder="0,00"
         />
       </div>
+
+      {!isEntrada && (
+        <div className="mt-3 grid grid-cols-2 gap-2" aria-label="Categoria do gasto">
+          {(["fixo", "variavel"] as const).map((category) => (
+            <button
+              key={category}
+              type="button"
+              onClick={() => onUpdate({ expense_class: category })}
+              className={`min-h-[44px] rounded-xl text-xs font-semibold ${row.expense_class === category ? "neu-inset text-secondary" : "neu-pressable text-muted-foreground"}`}
+            >
+              {category === "fixo" ? "Fixo" : "Variável"}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="mt-3 flex items-center justify-end gap-2">
         <button
@@ -688,7 +705,7 @@ function RowItem({
   row, onUpdate, onDelete, isDragging, onDragStart, onDragEnd, onDropRow,
 }: {
   row: Row;
-  onUpdate: (patch: { descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean }) => void;
+  onUpdate: (patch: RowPatch) => void;
   onDelete: () => void;
   isDragging: boolean;
   onDragStart: () => void;
@@ -765,6 +782,21 @@ function RowItem({
           className={`neu-inset w-full rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40 ${textCls}`}
           placeholder="Descrição"
         />
+      </td>
+      <td className="px-4 py-3">
+        {isEntrada ? (
+          <span className="text-xs text-muted-foreground">—</span>
+        ) : (
+          <select
+            value={row.expense_class}
+            onChange={(event) => onUpdate({ expense_class: event.target.value as "fixo" | "variavel" })}
+            aria-label={`Categoria de ${row.descricao || "saída"}`}
+            className="neu-inset min-h-[44px] rounded-lg bg-transparent px-3 text-xs font-semibold outline-none focus:ring-2 focus:ring-secondary/40"
+          >
+            <option value="fixo">Fixo</option>
+            <option value="variavel">Variável</option>
+          </select>
+        )}
       </td>
       <td className="px-4 py-3">
         <div className="neu-inset inline-flex rounded-full p-1">
