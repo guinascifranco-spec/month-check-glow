@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedVisaoGeralRouteImport } from './routes/_authenticated/visao-geral'
+import { Route as AuthenticatedVisaoFuturaRouteImport } from './routes/_authenticated/visao-futura'
 import { Route as AuthenticatedParcelasRouteImport } from './routes/_authenticated/parcelas'
 import { Route as AuthenticatedInvestimentosRouteImport } from './routes/_authenticated/investimentos'
 import { Route as AuthenticatedConferenciaRouteImport } from './routes/_authenticated/conferencia'
@@ -36,6 +37,12 @@ const AuthenticatedVisaoGeralRoute = AuthenticatedVisaoGeralRouteImport.update({
   path: '/visao-geral',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedVisaoFuturaRoute =
+  AuthenticatedVisaoFuturaRouteImport.update({
+    id: '/visao-futura',
+    path: '/visao-futura',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedParcelasRoute = AuthenticatedParcelasRouteImport.update({
   id: '/parcelas',
   path: '/parcelas',
@@ -60,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/conferencia': typeof AuthenticatedConferenciaRoute
   '/investimentos': typeof AuthenticatedInvestimentosRoute
   '/parcelas': typeof AuthenticatedParcelasRoute
+  '/visao-futura': typeof AuthenticatedVisaoFuturaRoute
   '/visao-geral': typeof AuthenticatedVisaoGeralRoute
 }
 export interface FileRoutesByTo {
@@ -68,6 +76,7 @@ export interface FileRoutesByTo {
   '/conferencia': typeof AuthenticatedConferenciaRoute
   '/investimentos': typeof AuthenticatedInvestimentosRoute
   '/parcelas': typeof AuthenticatedParcelasRoute
+  '/visao-futura': typeof AuthenticatedVisaoFuturaRoute
   '/visao-geral': typeof AuthenticatedVisaoGeralRoute
 }
 export interface FileRoutesById {
@@ -78,6 +87,7 @@ export interface FileRoutesById {
   '/_authenticated/conferencia': typeof AuthenticatedConferenciaRoute
   '/_authenticated/investimentos': typeof AuthenticatedInvestimentosRoute
   '/_authenticated/parcelas': typeof AuthenticatedParcelasRoute
+  '/_authenticated/visao-futura': typeof AuthenticatedVisaoFuturaRoute
   '/_authenticated/visao-geral': typeof AuthenticatedVisaoGeralRoute
 }
 export interface FileRouteTypes {
@@ -88,6 +98,7 @@ export interface FileRouteTypes {
     | '/conferencia'
     | '/investimentos'
     | '/parcelas'
+    | '/visao-futura'
     | '/visao-geral'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -96,6 +107,7 @@ export interface FileRouteTypes {
     | '/conferencia'
     | '/investimentos'
     | '/parcelas'
+    | '/visao-futura'
     | '/visao-geral'
   id:
     | '__root__'
@@ -105,6 +117,7 @@ export interface FileRouteTypes {
     | '/_authenticated/conferencia'
     | '/_authenticated/investimentos'
     | '/_authenticated/parcelas'
+    | '/_authenticated/visao-futura'
     | '/_authenticated/visao-geral'
   fileRoutesById: FileRoutesById
 }
@@ -144,6 +157,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVisaoGeralRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/visao-futura': {
+      id: '/_authenticated/visao-futura'
+      path: '/visao-futura'
+      fullPath: '/visao-futura'
+      preLoaderRoute: typeof AuthenticatedVisaoFuturaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/parcelas': {
       id: '/_authenticated/parcelas'
       path: '/parcelas'
@@ -172,6 +192,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedConferenciaRoute: typeof AuthenticatedConferenciaRoute
   AuthenticatedInvestimentosRoute: typeof AuthenticatedInvestimentosRoute
   AuthenticatedParcelasRoute: typeof AuthenticatedParcelasRoute
+  AuthenticatedVisaoFuturaRoute: typeof AuthenticatedVisaoFuturaRoute
   AuthenticatedVisaoGeralRoute: typeof AuthenticatedVisaoGeralRoute
 }
 
@@ -179,6 +200,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedConferenciaRoute: AuthenticatedConferenciaRoute,
   AuthenticatedInvestimentosRoute: AuthenticatedInvestimentosRoute,
   AuthenticatedParcelasRoute: AuthenticatedParcelasRoute,
+  AuthenticatedVisaoFuturaRoute: AuthenticatedVisaoFuturaRoute,
   AuthenticatedVisaoGeralRoute: AuthenticatedVisaoGeralRoute,
 }
 
