@@ -6,6 +6,7 @@ const tabs = [
   { to: "/parcelas", label: "Parcelas" },
   { to: "/investimentos", label: "Investimentos" },
   { to: "/visao-futura", label: "Visão Futura" },
+  { to: "/lancamentos", label: "Lançamentos" },
 ] as const;
 
 export function PageTabs() {

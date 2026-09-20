@@ -6,6 +6,8 @@ import { AlertTriangle, CalendarCheck, LogOut, TrendingDown, TrendingUp, WalletC
 import {
   Bar,
   BarChart,
+  Area,
+  ComposedChart,
   CartesianGrid,
   Legend,
   Line,
@@ -166,19 +168,21 @@ function FutureViewPage() {
 
             <ChartSection title="Renda, gastos e saldo" subtitle="Veja como cada mês deve terminar.">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>
+                <ComposedChart data={chartData} margin={{ top: 16, right: 12, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                   <XAxis dataKey="label" stroke="var(--color-muted-foreground)" fontSize={11} />
                   <YAxis stroke="var(--color-muted-foreground)" fontSize={11} width={74} tickFormatter={(value) => compactBrl.format(Number(value))} />
                   <Tooltip content={<ProjectionTooltip />} />
                   <Legend />
+                  <Area name="Saldo positivo" type="monotone" dataKey={(item: ProjectionMonth) => Math.max(0, item.saldo)} stroke="none" fill="var(--color-primary)" fillOpacity={0.14} legendType="none" />
+                  <Area name="Saldo negativo" type="monotone" dataKey={(item: ProjectionMonth) => Math.min(0, item.saldo)} stroke="none" fill="var(--color-danger)" fillOpacity={0.14} legendType="none" />
                   <Line name="Renda" type="monotone" dataKey="renda" stroke="var(--color-primary)" strokeWidth={3} dot={{ r: 3 }} />
                   <Line name="Gastos" type="monotone" dataKey="gastos" stroke="var(--color-danger)" strokeWidth={3} dot={{ r: 3 }} />
                   <Line name="Saldo" type="monotone" dataKey="saldo" stroke="var(--color-secondary)" strokeWidth={3} dot={{ r: 4 }} />
                   {chartData.filter((item) => item.saldo < 0).map((item) => (
                     <ReferenceDot key={item.label} x={item.label} y={item.saldo} r={6} fill="var(--color-danger)" stroke="var(--color-background)" strokeWidth={2} />
                   ))}
-                </LineChart>
+                </ComposedChart>
               </ResponsiveContainer>
             </ChartSection>
 
@@ -202,11 +206,11 @@ function FutureViewPage() {
                 <h2 className="text-lg font-bold">Eventos importantes</h2>
                 <p className="text-sm text-muted-foreground">Mudanças que merecem atenção no período.</p>
               </div>
-              {data.events.length === 0 ? (
+              {(data?.events ?? []).length === 0 ? (
                 <div className="neu-inset rounded-2xl p-6 text-center text-sm text-muted-foreground">Nenhum alerta para este período.</div>
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
-                  {data.events.map((event) => (
+                  {(data?.events ?? []).map((event) => (
                     <article key={event.id} className="neu-raised flex gap-3 rounded-2xl p-4">
                       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${event.kind === "installment" ? "text-primary" : "text-danger"}`}>
                         {event.kind === "installment" ? <CalendarCheck className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}

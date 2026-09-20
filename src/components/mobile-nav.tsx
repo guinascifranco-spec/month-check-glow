@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ListChecks, LayoutDashboard, CreditCard, TrendingUp, Telescope } from "lucide-react";
+import { ListChecks, LayoutDashboard, CreditCard, TrendingUp, Telescope, ReceiptText } from "lucide-react";
 
 const items = [
   { to: "/conferencia", label: "Conferência", Icon: ListChecks },
@@ -7,6 +7,7 @@ const items = [
   { to: "/parcelas", label: "Parcelas", Icon: CreditCard },
   { to: "/investimentos", label: "Invest.", Icon: TrendingUp },
   { to: "/visao-futura", label: "Futuro", Icon: Telescope },
+  { to: "/lancamentos", label: "Lançamentos", Icon: ReceiptText },
 ] as const;
 
 export function MobileNav() {
@@ -17,7 +18,7 @@ export function MobileNav() {
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       aria-label="Navegação principal"
     >
-      <div className="grid grid-cols-5">
+      <div className="grid grid-cols-6">
         {items.map(({ to, label, Icon }) => {
           const active = pathname === to;
           return (
@@ -25,7 +26,7 @@ export function MobileNav() {
               key={to}
               to={to}
               className={
-                "flex min-h-[56px] flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] font-semibold transition-colors " +
+                "flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 px-0.5 py-2 text-[10px] font-semibold transition-colors " +
                 (active ? "text-primary" : "text-muted-foreground")
               }
             >
