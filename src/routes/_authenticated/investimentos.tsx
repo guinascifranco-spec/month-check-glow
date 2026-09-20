@@ -51,6 +51,10 @@ export const Route = createFileRoute("/_authenticated/investimentos")({
     meta: [
       { title: "Investimentos — Month Check" },
       { name: "description", content: "Gestão de ativos, aportes e proventos." },
+      { property: "og:title", content: "Investimentos — Month Check" },
+      { property: "og:description", content: "Gestão de ativos, aportes e proventos." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: InvestimentosPage,
