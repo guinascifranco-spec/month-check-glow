@@ -94,6 +94,33 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_categories: {
+        Row: {
+          color_key: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color_key?: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color_key?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       installment_settings: {
         Row: {
           created_at: string
@@ -186,6 +213,7 @@ export type Database = {
       }
       month_check_rows: {
         Row: {
+          category_id: string | null
           created_at: string
           descricao: string
           expense_class: string
@@ -194,12 +222,14 @@ export type Database = {
           position: number
           quitado: boolean
           tipo: string
+          transaction_date: string | null
           updated_at: string
           user_id: string
           valor: number
           year: number
         }
         Insert: {
+          category_id?: string | null
           created_at?: string
           descricao?: string
           expense_class?: string
@@ -208,12 +238,14 @@ export type Database = {
           position?: number
           quitado?: boolean
           tipo: string
+          transaction_date?: string | null
           updated_at?: string
           user_id: string
           valor?: number
           year: number
         }
         Update: {
+          category_id?: string | null
           created_at?: string
           descricao?: string
           expense_class?: string
@@ -222,12 +254,21 @@ export type Database = {
           position?: number
           quitado?: boolean
           tipo?: string
+          transaction_date?: string | null
           updated_at?: string
           user_id?: string
           valor?: number
           year?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "month_check_rows_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       proventos: {
         Row: {
