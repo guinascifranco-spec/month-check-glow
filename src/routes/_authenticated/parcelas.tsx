@@ -32,6 +32,10 @@ export const Route = createFileRoute("/_authenticated/parcelas")({
     meta: [
       { title: "Parcelas — Month Check" },
       { name: "description", content: "Controle de gastos parcelados e limite mensal." },
+      { property: "og:title", content: "Parcelas — Month Check" },
+      { property: "og:description", content: "Controle de gastos parcelados e limite mensal." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ParcelasPage,

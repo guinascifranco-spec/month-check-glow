@@ -24,6 +24,10 @@ export const Route = createFileRoute("/_authenticated/conferencia")({
     meta: [
       { title: "Conferência — Month Check" },
       { name: "description", content: "Confira entradas, saídas e saldo do mês." },
+      { property: "og:title", content: "Conferência — Month Check" },
+      { property: "og:description", content: "Confira entradas, saídas e saldo do mês." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ConferenciaPage,

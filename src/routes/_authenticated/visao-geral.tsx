@@ -34,6 +34,10 @@ export const Route = createFileRoute("/_authenticated/visao-geral")({
     meta: [
       { title: "Visão Geral — Month Check" },
       { name: "description", content: "Patrimônio, investimentos e projeção futura." },
+      { property: "og:title", content: "Visão Geral — Month Check" },
+      { property: "og:description", content: "Patrimônio, investimentos e projeção futura." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: VisaoGeralPage,

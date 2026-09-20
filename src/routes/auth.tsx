@@ -11,6 +11,10 @@ export const Route = createFileRoute("/auth")({
     meta: [
       { title: "Entrar — Month Check" },
       { name: "description", content: "Acesse sua conta para conferir suas finanças mensais." },
+      { property: "og:title", content: "Entrar — Month Check" },
+      { property: "og:description", content: "Acesse sua conta para conferir suas finanças mensais." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AuthPage,
@@ -36,7 +40,7 @@ function AuthPage() {
     setError(null);
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin + "/conferencia",
+        redirect_uri: window.location.origin,
       });
       if (result.error) throw result.error;
       if (!result.redirected) {
