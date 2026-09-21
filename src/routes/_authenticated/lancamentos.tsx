@@ -2,8 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { CalendarDays, Check, Edit3, LogOut, Plus, Search, Tags, Trash2, TrendingDown, TrendingUp, Wallet } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CalendarDays, Check, Edit3, LogOut, Plus, Search, Tags, Trash2, TrendingDown, TrendingUp, Wallet, Wand2, Settings2 } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { InstallPWAButton } from "@/components/install-pwa-button";
 import { MobileNav } from "@/components/mobile-nav";
@@ -21,21 +20,21 @@ import {
   getTransactionWorkspace,
   renameExpenseCategory,
   updateTransaction,
+  createCategoryRule,
+  deleteCategoryRule,
+  applyCategoryRules,
 } from "@/lib/transactions.functions";
 
 export const Route = createFileRoute("/_authenticated/lancamentos")({
   head: () => ({ meta: [
     { title: "Lançamentos — Month Check" },
     { name: "description", content: "Cadastre e analise suas entradas e seus gastos por categoria." },
-    { property: "og:title", content: "Lançamentos — Month Check" },
-    { property: "og:description", content: "Cadastre e analise suas entradas e seus gastos por categoria." },
-    { property: "og:type", content: "website" },
-    { name: "twitter:card", content: "summary" },
   ] }),
   component: TransactionsPage,
 });
 
 type Category = { id: string; name: string; color_key: string };
+type Rule = { id: string; keyword: string; category_id: string };
 type Transaction = {
   id: string; year: number; month: number; transaction_date: string | null; descricao: string;
   tipo: "entrada" | "saida"; valor: number; quitado: boolean; expense_class: "fixo" | "variavel";
@@ -44,9 +43,7 @@ type Transaction = {
 type FormState = { id?: string; date: string; description: string; type: "entrada" | "saida"; value: string; categoryId: string; expenseClass: "fixo" | "variavel"; settled: boolean };
 
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const compactBrl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact" });
-const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-const CHART_COLORS = ["var(--color-chart-1)", "var(--color-chart-2)", "var(--color-chart-3)", "var(--color-chart-4)", "var(--color-chart-5)", "var(--color-chart-6)", "var(--color-chart-7)", "var(--color-muted-foreground)"];
+const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 function localDate(date = new Date()) {
   const year = date.getFullYear();
@@ -61,6 +58,16 @@ function firstDayMonthsAgo(months: number) {
 }
 function emptyForm(): FormState { return { date: localDate(), description: "", type: "saida", value: "", categoryId: "", expenseClass: "variavel", settled: false }; }
 
+function getSuggestedCategory(description: string, rules: Rule[]) {
+  const desc = description.toLowerCase();
+  for (const rule of rules) {
+    if (desc.includes(rule.keyword)) {
+      return rule.category_id;
+    }
+  }
+  return null;
+}
+
 function TransactionsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -71,23 +78,33 @@ function TransactionsPage() {
   const createCategoryFn = useServerFn(createExpenseCategory);
   const renameCategoryFn = useServerFn(renameExpenseCategory);
   const deleteCategoryFn = useServerFn(deleteExpenseCategory);
+  const createRuleFn = useServerFn(createCategoryRule);
+  const deleteRuleFn = useServerFn(deleteCategoryRule);
+  const applyRulesFn = useServerFn(applyCategoryRules);
+
   const [from, setFrom] = useState(() => firstDayMonthsAgo(6));
   const [to, setTo] = useState(() => localDate());
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("todos");
   const [categoryFilter, setCategoryFilter] = useState("todas");
   const [settledFilter, setSettledFilter] = useState("todos");
+  
   const [formOpen, setFormOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
 
   const key = ["transactions", from, to] as const;
   const { data, isLoading, error } = useQuery({
     queryKey: key,
-    queryFn: () => fetchWorkspace({ data: { from, to } }) as Promise<{ categories: Category[]; rows: Transaction[] }>,
+    queryFn: () => fetchWorkspace({ data: { from, to } }) as Promise<{ categories: Category[]; rules: Rule[]; rows: Transaction[] }>,
   });
+  
   const categories = data?.categories ?? [];
-  const categoryNames = useMemo(() => new Map(categories.map((category) => [category.id, category.name])), [categories]);
+  const rules = data?.rules ?? [];
+  const categoryNames = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories]);
+  
   const rows = useMemo(() => (data?.rows ?? []).filter((row) => {
     if (search && !row.descricao.toLocaleLowerCase("pt-BR").includes(search.toLocaleLowerCase("pt-BR"))) return false;
     if (typeFilter !== "todos" && row.tipo !== typeFilter) return false;
@@ -103,26 +120,25 @@ function TransactionsPage() {
     else sum.expense += Number(row.valor) || 0;
     return sum;
   }, { income: 0, expense: 0 }), [rows]);
-  const distribution = useMemo(() => {
-    const grouped = new Map<string, number>();
-    for (const row of rows.filter((item) => item.tipo === "saida")) {
-      const name = row.category_id ? categoryNames.get(row.category_id) ?? "Sem categoria" : "Sem categoria";
-      grouped.set(name, (grouped.get(name) ?? 0) + (Number(row.valor) || 0));
+
+  // Group by month/year
+  const groupedRows = useMemo(() => {
+    const map = new Map<string, Transaction[]>();
+    for (const row of rows) {
+      const g = `${row.year}-${String(row.month).padStart(2, "0")}`;
+      if (!map.has(g)) map.set(g, []);
+      map.get(g)!.push(row);
     }
-    return [...grouped].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-  }, [rows, categoryNames]);
-  const monthly = useMemo(() => {
-    const values = new Map<string, Record<string, number | string>>();
-    for (const row of rows.filter((item) => item.tipo === "saida")) {
-      const key = `${row.year}-${String(row.month).padStart(2, "0")}`;
-      const name = row.category_id ? categoryNames.get(row.category_id) ?? "Sem categoria" : "Sem categoria";
-      const item = values.get(key) ?? { key, label: `${MONTHS[row.month - 1]}/${String(row.year).slice(-2)}` };
-      item[name] = Number(item[name] ?? 0) + (Number(row.valor) || 0);
-      values.set(key, item);
-    }
-    return [...values.values()].sort((a, b) => String(a.key).localeCompare(String(b.key)));
-  }, [rows, categoryNames]);
-  const visibleCategories = distribution.map((item) => item.name);
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0])); // newest first
+  }, [rows]);
+
+  // Suggestions
+  const suggestions = useMemo(() => {
+    return rows
+      .filter((r) => r.tipo === "saida" && !r.category_id)
+      .map((r) => ({ row: r, suggestedCategoryId: getSuggestedCategory(r.descricao, rules) }))
+      .filter((s) => s.suggestedCategoryId !== null) as { row: Transaction; suggestedCategoryId: string }[];
+  }, [rows, rules]);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["transactions"] });
@@ -130,27 +146,36 @@ function TransactionsPage() {
     queryClient.invalidateQueries({ queryKey: ["year-totals"] });
     queryClient.invalidateQueries({ queryKey: ["future-projection"] });
   };
+
   const saveMutation = useMutation({ mutationFn: async () => {
     const value = Number(form.value.replace(",", ".")) || 0;
     const payload = { date: form.date, description: form.description, type: form.type, value, categoryId: form.categoryId || null, expenseClass: form.expenseClass, settled: form.settled };
     if (form.id) return updateFn({ data: { id: form.id, ...payload } });
     return createFn({ data: payload });
   }, onSuccess: () => { refresh(); setFormOpen(false); } });
+  
   const deleteMutation = useMutation({ mutationFn: (id: string) => deleteFn({ data: { id } }), onSuccess: refresh });
+  
+  const applyRulesMutation = useMutation({
+    mutationFn: (updates: Array<{ id: string; categoryId: string }>) => applyRulesFn({ data: { updates } }),
+    onSuccess: () => { refresh(); setReviewOpen(false); }
+  });
 
   function edit(row: Transaction) {
-    setForm({ id: row.id, date: row.transaction_date ?? `${row.year}-${String(row.month).padStart(2, "0")}-01`, description: row.descricao, type: row.tipo, value: String(row.valor), categoryId: row.category_id ?? "", expenseClass: row.expense_class, settled: row.quitado });
+    setForm({ id: row.id, date: row.transaction_date ?? `${row.year}-${String(row.month).padStart(2, "0")}-01`, description: row.descricao, type: row.tipo, value: String(row.valor || ""), categoryId: row.category_id ?? "", expenseClass: row.expense_class, settled: row.quitado });
     setFormOpen(true);
   }
+
   async function signOut() { await queryClient.cancelQueries(); queryClient.clear(); await supabase.auth.signOut(); navigate({ to: "/auth", replace: true }); }
 
   return (
     <div className="min-h-screen px-4 pb-28 pt-6 sm:px-8 sm:py-8 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:mb-8 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
-          <div className="flex min-w-0 items-center gap-3"><Logo height={40} /><div className="min-w-0"><h1 className="truncate text-xl font-bold sm:text-3xl">Month Check</h1><p className="truncate text-sm text-muted-foreground">Lançamentos e distribuição dos gastos</p></div></div>
+          <div className="flex min-w-0 items-center gap-3"><Logo height={40} /><div className="min-w-0"><h1 className="truncate text-xl font-bold sm:text-3xl">Month Check</h1><p className="truncate text-sm text-muted-foreground">Histórico Oficial (Lançamentos)</p></div></div>
           <div className="flex items-center gap-2"><InstallPWAButton /><Button variant="ghost" onClick={signOut} className="neu-pressable min-h-11"><LogOut /><span className="hidden sm:inline">Sair</span></Button></div>
         </header>
+        
         <div className="mb-6"><PageTabs /></div>
 
         <section className="neu-raised mb-6 rounded-2xl p-4 sm:p-6">
@@ -161,36 +186,58 @@ function TransactionsPage() {
             <FilterField label="Categoria"><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="neu-inset min-h-11 w-full rounded-lg bg-transparent px-3"><option value="todas">Todas</option><option value="sem-categoria">Sem categoria</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></FilterField>
             <FilterField label="Situação"><select value={settledFilter} onChange={(event) => setSettledFilter(event.target.value)} className="neu-inset min-h-11 w-full rounded-lg bg-transparent px-3"><option value="todos">Todas</option><option value="quitado">Quitados</option><option value="pendente">Pendentes</option></select></FilterField>
           </div>
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <label className="neu-inset flex min-h-11 flex-1 items-center gap-2 rounded-xl px-3"><Search className="h-4 w-4 text-muted-foreground"/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar descrição" className="w-full bg-transparent text-sm outline-none" /></label>
-            <div className="grid grid-cols-2 gap-2"><Button variant="outline" onClick={() => setCategoryOpen(true)} className="neu-pressable min-h-11"><Tags />Categorias</Button><Button onClick={() => { setForm(emptyForm()); setFormOpen(true); }} className="min-h-11"><Plus />Novo lançamento</Button></div>
+            <div className="grid grid-cols-3 gap-2">
+              <Button variant="outline" onClick={() => setRulesOpen(true)} className="neu-pressable min-h-11"><Settings2 />Regras</Button>
+              <Button variant="outline" onClick={() => setCategoryOpen(true)} className="neu-pressable min-h-11"><Tags />Categorias</Button>
+              <Button onClick={() => { setForm(emptyForm()); setFormOpen(true); }} className="min-h-11"><Plus />Novo</Button>
+            </div>
           </div>
         </section>
 
         <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3">
-          <Metric icon={TrendingUp} label="Entradas" value={totals.income} tone="positive" />
-          <Metric icon={TrendingDown} label="Saídas" value={totals.expense} tone="negative" />
-          <Metric icon={Wallet} label="Saldo" value={totals.income - totals.expense} tone={totals.income - totals.expense >= 0 ? "positive" : "negative"} />
+          <Metric icon={TrendingUp} label="Entradas (Filtro)" value={totals.income} tone="positive" />
+          <Metric icon={TrendingDown} label="Saídas (Filtro)" value={totals.expense} tone="negative" />
+          <Metric icon={Wallet} label="Saldo (Filtro)" value={totals.income - totals.expense} tone={totals.income - totals.expense >= 0 ? "positive" : "negative"} />
         </div>
 
-        <div className="mb-6 grid gap-6 lg:grid-cols-2">
-          <ChartCard title="Distribuição por categoria" empty={!distribution.length}>
-            <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={distribution} dataKey="value" nameKey="name" innerRadius="48%" outerRadius="76%" paddingAngle={2}>{distribution.map((item, index) => <Cell key={item.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}</Pie><Tooltip formatter={(value) => brl.format(Number(value))} /><Legend /></PieChart></ResponsiveContainer>
-          </ChartCard>
-          <ChartCard title="Gastos por mês" empty={!monthly.length}>
-            <ResponsiveContainer width="100%" height="100%"><BarChart data={monthly}><CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)"/><XAxis dataKey="label" fontSize={11}/><YAxis width={68} fontSize={11} tickFormatter={(value) => compactBrl.format(Number(value))}/><Tooltip formatter={(value) => brl.format(Number(value))}/><Legend />{visibleCategories.map((name, index) => <Bar key={name} dataKey={name} stackId="expenses" fill={CHART_COLORS[index % CHART_COLORS.length]} />)}</BarChart></ResponsiveContainer>
-          </ChartCard>
-        </div>
+        {suggestions.length > 0 && (
+          <div className="neu-raised mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl p-4 border-l-4 border-secondary/50">
+            <div>
+              <h3 className="font-bold flex items-center gap-2"><Wand2 className="h-4 w-4 text-secondary" /> Categorias sugeridas</h3>
+              <p className="text-sm text-muted-foreground">Encontramos {suggestions.length} lançamentos sem categoria que combinam com suas regras.</p>
+            </div>
+            <Button onClick={() => setReviewOpen(true)} variant="secondary" className="shrink-0">Revisar {suggestions.length} sugestões</Button>
+          </div>
+        )}
 
-        <section className="neu-raised rounded-2xl p-4 sm:p-6">
-          <h2 className="font-bold">Lançamentos do período</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{rows.length} {rows.length === 1 ? "registro encontrado" : "registros encontrados"}</p>
-          {isLoading ? <Empty text="Carregando lançamentos..." /> : error ? <Empty text="Não foi possível carregar os lançamentos." /> : rows.length === 0 ? <Empty text="Nenhum lançamento encontrado para os filtros escolhidos." /> : <div className="mt-4 grid gap-3 md:grid-cols-2">{rows.map((row) => <TransactionCard key={row.id} row={row} category={row.category_id ? categoryNames.get(row.category_id) : undefined} onEdit={() => edit(row)} onDelete={() => deleteMutation.mutate(row.id)} />)}</div>}
+        <section className="space-y-8">
+          {isLoading ? <Empty text="Carregando lançamentos..." /> : error ? <Empty text="Não foi possível carregar os lançamentos." /> : rows.length === 0 ? <Empty text="Nenhum lançamento encontrado." /> : (
+            groupedRows.map(([groupKey, groupRows]) => {
+              const [y, m] = groupKey.split("-");
+              const monthName = `${MONTHS[parseInt(m, 10) - 1]} ${y}`;
+              return (
+                <div key={groupKey} className="neu-raised rounded-2xl overflow-hidden">
+                  <div className="bg-muted/30 px-4 py-3 font-bold border-b border-border/50 text-sm tracking-wide">
+                    {monthName}
+                  </div>
+                  <div className="divide-y divide-border/50">
+                    {groupRows.map(row => (
+                      <TransactionRow key={row.id} row={row} category={row.category_id ? categoryNames.get(row.category_id) : undefined} onEdit={() => edit(row)} onDelete={() => deleteMutation.mutate(row.id)} />
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </section>
       </div>
 
       <TransactionDialog open={formOpen} onOpenChange={setFormOpen} form={form} setForm={setForm} categories={categories} saving={saveMutation.isPending} onSave={() => saveMutation.mutate()} />
       <CategoriesDialog open={categoryOpen} onOpenChange={setCategoryOpen} categories={categories} onCreate={async (name, colorKey) => { await createCategoryFn({ data: { name, colorKey } }); refresh(); }} onRename={async (id, name) => { await renameCategoryFn({ data: { id, name } }); refresh(); }} onDelete={async (id) => { await deleteCategoryFn({ data: { id } }); refresh(); }} />
+      <RulesDialog open={rulesOpen} onOpenChange={setRulesOpen} rules={rules} categories={categories} categoryNames={categoryNames} onCreate={async (keyword, categoryId) => { await createRuleFn({ data: { keyword, categoryId } }); refresh(); }} onDelete={async (id) => { await deleteRuleFn({ data: { id } }); refresh(); }} />
+      <ReviewDialog open={reviewOpen} onOpenChange={setReviewOpen} suggestions={suggestions} categoryNames={categoryNames} onApply={(updates) => applyRulesMutation.mutate(updates)} isApplying={applyRulesMutation.isPending} />
       <MobileNav />
     </div>
   );
@@ -198,20 +245,116 @@ function TransactionsPage() {
 
 function FilterField({ label, children }: { label: string; children: React.ReactNode }) { return <label><span className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">{label}</span>{children}</label>; }
 function Metric({ icon: Icon, label, value, tone }: { icon: typeof Wallet; label: string; value: number; tone: "positive" | "negative" }) { return <article className="neu-raised rounded-2xl p-4 sm:p-5"><div className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground"><Icon className="h-4 w-4" />{label}</div><div className={`mt-2 break-words text-xl font-bold sm:text-2xl ${tone === "positive" ? "text-primary" : "text-danger"}`}>{brl.format(value)}</div></article>; }
-function ChartCard({ title, empty, children }: { title: string; empty: boolean; children: React.ReactNode }) { return <section className="neu-raised rounded-2xl p-4 sm:p-6"><h2 className="font-bold">{title}</h2><div className="mt-4 h-72">{empty ? <div className="neu-inset flex h-full items-center justify-center rounded-xl px-6 text-center text-sm text-muted-foreground">Adicione gastos categorizados para visualizar este gráfico.</div> : children}</div></section>; }
-function Empty({ text }: { text: string }) { return <div className="neu-inset mt-4 rounded-xl p-8 text-center text-sm text-muted-foreground">{text}</div>; }
+function Empty({ text }: { text: string }) { return <div className="neu-inset rounded-xl p-8 text-center text-sm text-muted-foreground">{text}</div>; }
 
-function TransactionCard({ row, category, onEdit, onDelete }: { row: Transaction; category?: string; onEdit: () => void; onDelete: () => void }) {
+function TransactionRow({ row, category, onEdit, onDelete }: { row: Transaction; category?: string; onEdit: () => void; onDelete: () => void }) {
   const date = row.transaction_date ?? `${row.year}-${String(row.month).padStart(2, "0")}-01`;
-  return <article className={`neu-inset rounded-xl p-4 ${row.quitado ? "opacity-70" : ""}`}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className={`truncate font-semibold ${row.quitado ? "line-through" : ""}`}>{row.descricao || "Sem descrição"}</h3><div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground"><span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5"/>{new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`))}</span>{row.tipo === "saida" && <span>{category ?? "Sem categoria"}</span>}{row.quitado && <span className="inline-flex items-center gap-1 text-primary"><Check className="h-3.5 w-3.5"/>Quitado</span>}</div></div><div className={`shrink-0 font-bold ${row.tipo === "entrada" ? "text-primary" : "text-danger"}`}>{row.tipo === "entrada" ? "+" : "−"}{brl.format(Number(row.valor))}</div></div><div className="mt-3 flex justify-end gap-2"><Button variant="ghost" size="icon" onClick={onEdit} className="neu-pressable h-11 w-11" aria-label="Editar lançamento"><Edit3 /></Button><Button variant="ghost" size="icon" onClick={onDelete} className="neu-pressable h-11 w-11 text-danger" aria-label="Excluir lançamento"><Trash2 /></Button></div></article>;
+  const formattedDate = new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC", day: "2-digit", month: "2-digit" }).format(new Date(`${date}T12:00:00Z`));
+  const hasValue = row.valor && row.valor > 0;
+
+  return (
+    <div className={`flex flex-col sm:flex-row sm:items-center gap-2 p-3 sm:p-4 hover:bg-muted/10 transition-colors ${row.quitado ? "opacity-60" : ""}`}>
+      <div className="flex-1 min-w-0 flex items-center gap-3">
+        <div className="w-12 shrink-0 text-xs font-medium text-muted-foreground bg-muted/20 rounded p-1 text-center">{formattedDate}</div>
+        <div className="min-w-0">
+          <div className={`truncate font-semibold text-sm sm:text-base ${row.quitado ? "line-through" : ""}`}>{row.descricao || "Sem descrição"}</div>
+          <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground mt-0.5">
+            {row.tipo === "saida" && <span className="bg-muted/30 px-1.5 py-0.5 rounded">{category ?? "Sem categoria"}</span>}
+            {row.tipo === "saida" && row.expense_class && <span className="opacity-70">{row.expense_class === "fixo" ? "Fixo" : "Variável"}</span>}
+            {row.quitado && <span className="text-primary flex items-center gap-1"><Check className="h-3 w-3"/> Quit.</span>}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between sm:justify-end gap-4 mt-2 sm:mt-0 pl-15 sm:pl-0">
+        <div className={`font-bold tabular-nums text-right ${row.tipo === "entrada" ? "text-primary" : "text-danger"} ${!hasValue ? "text-muted-foreground/50 text-sm font-medium" : ""}`}>
+          {!hasValue ? "sem valor" : `${row.tipo === "entrada" ? "+" : "−"}${brl.format(Number(row.valor))}`}
+        </div>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" onClick={onEdit} className="h-8 w-8 hover:bg-background"><Edit3 className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={onDelete} className="h-8 w-8 text-danger hover:bg-background"><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function TransactionDialog({ open, onOpenChange, form, setForm, categories, saving, onSave }: { open: boolean; onOpenChange: (value: boolean) => void; form: FormState; setForm: React.Dispatch<React.SetStateAction<FormState>>; categories: Category[]; saving: boolean; onSave: () => void }) {
-  const valid = form.date && form.description.trim() && Number(form.value.replace(",", ".")) > 0;
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent><DialogHeader><DialogTitle>{form.id ? "Editar lançamento" : "Novo lançamento"}</DialogTitle></DialogHeader><div className="space-y-4 overflow-y-auto px-1"><div className="grid grid-cols-2 gap-3"><FilterField label="Data"><Input type="date" value={form.date} onChange={(event) => setForm((old) => ({ ...old, date: event.target.value }))}/></FilterField><FilterField label="Tipo"><select value={form.type} onChange={(event) => setForm((old) => ({ ...old, type: event.target.value as FormState["type"] }))} className="neu-inset min-h-11 w-full rounded-lg bg-transparent px-3"><option value="saida">Saída</option><option value="entrada">Entrada</option></select></FilterField></div><div><Label>Descrição</Label><Input className="mt-1" value={form.description} onChange={(event) => setForm((old) => ({ ...old, description: event.target.value }))} placeholder="Ex: Supermercado" /></div><div><Label>Valor (R$)</Label><Input className="mt-1" type="text" inputMode="decimal" value={form.value} onChange={(event) => setForm((old) => ({ ...old, value: event.target.value }))} placeholder="0,00" /></div>{form.type === "saida" && <><div><Label>Categoria</Label><select value={form.categoryId} onChange={(event) => setForm((old) => ({ ...old, categoryId: event.target.value }))} className="neu-inset mt-1 min-h-11 w-full rounded-lg bg-transparent px-3"><option value="">Sem categoria</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div><div className="grid grid-cols-2 gap-2">{(["fixo", "variavel"] as const).map((value) => <Button key={value} type="button" variant="outline" className={`min-h-11 ${form.expenseClass === value ? "neu-inset text-secondary" : "neu-pressable"}`} onClick={() => setForm((old) => ({ ...old, expenseClass: value }))}>{value === "fixo" ? "Fixo" : "Variável"}</Button>)}</div></>}<label className="flex min-h-11 items-center gap-3"><input type="checkbox" checked={form.settled} onChange={(event) => setForm((old) => ({ ...old, settled: event.target.checked }))} className="h-5 w-5 accent-primary"/><span className="text-sm font-medium">Quitado</span></label></div><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button><Button disabled={!valid || saving} onClick={onSave}>{saving ? "Salvando..." : "Salvar"}</Button></DialogFooter></DialogContent></Dialog>;
+  const valid = form.date && form.description.trim(); // valor 0 is now allowed as 'sem valor'
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent><DialogHeader><DialogTitle>{form.id ? "Editar lançamento" : "Novo lançamento"}</DialogTitle></DialogHeader><div className="space-y-4 overflow-y-auto px-1"><div className="grid grid-cols-2 gap-3"><FilterField label="Data"><Input type="date" value={form.date} onChange={(event) => setForm((old) => ({ ...old, date: event.target.value }))}/></FilterField><FilterField label="Tipo"><select value={form.type} onChange={(event) => setForm((old) => ({ ...old, type: event.target.value as FormState["type"] }))} className="neu-inset min-h-11 w-full rounded-lg bg-transparent px-3"><option value="saida">Saída</option><option value="entrada">Entrada</option></select></FilterField></div><div><Label>Descrição</Label><Input className="mt-1" value={form.description} onChange={(event) => setForm((old) => ({ ...old, description: event.target.value }))} placeholder="Ex: Supermercado" /></div><div><Label>Valor (R$) <span className="text-muted-foreground font-normal">(Deixe vazio para "sem valor")</span></Label><Input className="mt-1" type="text" inputMode="decimal" value={form.value} onChange={(event) => setForm((old) => ({ ...old, value: event.target.value }))} placeholder="0,00" /></div>{form.type === "saida" && <><div><Label>Categoria</Label><select value={form.categoryId} onChange={(event) => setForm((old) => ({ ...old, categoryId: event.target.value }))} className="neu-inset mt-1 min-h-11 w-full rounded-lg bg-transparent px-3"><option value="">Sem categoria</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div><div className="grid grid-cols-2 gap-2">{(["fixo", "variavel"] as const).map((value) => <Button key={value} type="button" variant="outline" className={`min-h-11 ${form.expenseClass === value ? "neu-inset text-secondary" : "neu-pressable"}`} onClick={() => setForm((old) => ({ ...old, expenseClass: value }))}>{value === "fixo" ? "Fixo" : "Variável"}</Button>)}</div></>}<label className="flex min-h-11 items-center gap-3"><input type="checkbox" checked={form.settled} onChange={(event) => setForm((old) => ({ ...old, settled: event.target.checked }))} className="h-5 w-5 accent-primary"/><span className="text-sm font-medium">Quitado</span></label></div><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button><Button disabled={!valid || saving} onClick={onSave}>{saving ? "Salvando..." : "Salvar"}</Button></DialogFooter></DialogContent></Dialog>;
 }
 
 function CategoriesDialog({ open, onOpenChange, categories, onCreate, onRename, onDelete }: { open: boolean; onOpenChange: (value: boolean) => void; categories: Category[]; onCreate: (name: string, color: string) => Promise<void>; onRename: (id: string, name: string) => Promise<void>; onDelete: (id: string) => Promise<void> }) {
   const [name, setName] = useState("");
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent><DialogHeader><DialogTitle>Categorias de gastos</DialogTitle></DialogHeader><div className="space-y-3 overflow-y-auto">{categories.map((category) => <div key={category.id} className="neu-inset flex items-center gap-2 rounded-xl p-2"><input defaultValue={category.name} onBlur={(event) => { const next = event.target.value.trim(); if (next && next !== category.name) void onRename(category.id, next); }} className="min-h-11 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none"/><Button variant="ghost" size="icon" className="h-11 w-11 text-danger" onClick={() => void onDelete(category.id)} aria-label={`Excluir ${category.name}`}><Trash2 /></Button></div>)}<div className="flex gap-2"><Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Nova categoria"/><Button disabled={!name.trim()} onClick={async () => { await onCreate(name.trim(), "emerald"); setName(""); }}><Plus/>Adicionar</Button></div></div><DialogFooter><Button onClick={() => onOpenChange(false)}>Concluir</Button></DialogFooter></DialogContent></Dialog>;
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent><DialogHeader><DialogTitle>Categorias de gastos</DialogTitle></DialogHeader><div className="space-y-3 overflow-y-auto max-h-[50vh]">{categories.map((category) => <div key={category.id} className="neu-inset flex items-center gap-2 rounded-xl p-2"><input defaultValue={category.name} onBlur={(event) => { const next = event.target.value.trim(); if (next && next !== category.name) void onRename(category.id, next); }} className="min-h-11 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none"/><Button variant="ghost" size="icon" className="h-11 w-11 text-danger shrink-0" onClick={() => void onDelete(category.id)} aria-label={`Excluir ${category.name}`}><Trash2 /></Button></div>)}</div><div className="flex gap-2 pt-2"><Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Nova categoria"/><Button disabled={!name.trim()} onClick={async () => { await onCreate(name.trim(), "emerald"); setName(""); }}><Plus/>Adicionar</Button></div><DialogFooter><Button onClick={() => onOpenChange(false)}>Concluir</Button></DialogFooter></DialogContent></Dialog>;
+}
+
+function RulesDialog({ open, onOpenChange, rules, categories, categoryNames, onCreate, onDelete }: { open: boolean; onOpenChange: (value: boolean) => void; rules: Rule[]; categories: Category[]; categoryNames: Map<string, string>; onCreate: (keyword: string, categoryId: string) => Promise<void>; onDelete: (id: string) => Promise<void> }) {
+  const [keyword, setKeyword] = useState("");
+  const [catId, setCatId] = useState("");
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-w-xl"><DialogHeader><DialogTitle>Regras de Categoria Automática</DialogTitle><p className="text-sm text-muted-foreground mt-1">Se a descrição contiver a palavra-chave, a categoria será sugerida automaticamente.</p></DialogHeader><div className="space-y-3 overflow-y-auto max-h-[50vh]">{rules.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhuma regra criada ainda.</p>}{rules.map((rule) => <div key={rule.id} className="neu-inset flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl p-3"><div className="text-sm">Palavra: <span className="font-bold">"{rule.keyword}"</span> → <span className="bg-muted/30 px-2 py-0.5 rounded font-medium">{categoryNames.get(rule.category_id) ?? "Desconhecida"}</span></div><Button variant="ghost" size="icon" className="h-8 w-8 text-danger shrink-0 self-end sm:self-auto" onClick={() => void onDelete(rule.id)} aria-label="Excluir regra"><Trash2 className="h-4 w-4" /></Button></div>)}</div><div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 pt-4 border-t border-border/50"><Input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Palavra-chave (ex: uber)"/><select value={catId} onChange={(e) => setCatId(e.target.value)} className="neu-inset min-h-11 rounded-lg bg-transparent px-3 text-sm"><option value="" disabled>Selecionar categoria...</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select><Button disabled={!keyword.trim() || !catId} onClick={async () => { await onCreate(keyword.trim(), catId); setKeyword(""); setCatId(""); }}><Plus/>Criar</Button></div><DialogFooter><Button onClick={() => onOpenChange(false)}>Fechar</Button></DialogFooter></DialogContent></Dialog>;
+}
+
+function ReviewDialog({ open, onOpenChange, suggestions, categoryNames, onApply, isApplying }: { open: boolean; onOpenChange: (value: boolean) => void; suggestions: { row: Transaction; suggestedCategoryId: string }[]; categoryNames: Map<string, string>; onApply: (updates: {id: string, categoryId: string}[]) => void; isApplying: boolean }) {
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(suggestions.map(s => s.row.id)));
+  
+  // Update selections when suggestions change
+  useMemo(() => {
+    setSelected(new Set(suggestions.map(s => s.row.id)));
+  }, [suggestions]);
+
+  function toggle(id: string) {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelected(next);
+  }
+
+  function apply() {
+    const updates = suggestions.filter(s => selected.has(s.row.id)).map(s => ({ id: s.row.id, categoryId: s.suggestedCategoryId }));
+    onApply(updates);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Revisar Categorias Sugeridas</DialogTitle>
+          <p className="text-sm text-muted-foreground mt-1">Selecione quais sugestões deseja aplicar aos seus lançamentos.</p>
+        </DialogHeader>
+        <div className="space-y-2 overflow-y-auto max-h-[50vh] pr-2">
+          {suggestions.map(({row, suggestedCategoryId}) => {
+            const isSelected = selected.has(row.id);
+            const date = row.transaction_date ?? `${row.year}-${String(row.month).padStart(2, "0")}-01`;
+            return (
+              <label key={row.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-colors cursor-pointer ${isSelected ? "border-primary bg-primary/5" : "border-border/50 bg-background"}`}>
+                <input type="checkbox" className="h-5 w-5 accent-primary shrink-0" checked={isSelected} onChange={() => toggle(row.id)} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex justify-between">
+                    <span className="font-semibold text-sm truncate">{row.descricao}</span>
+                    <span className="font-medium text-danger text-sm shrink-0 pl-2">−{brl.format(Number(row.valor))}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs mt-1 text-muted-foreground">
+                    <span>{new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC", month: "short", day: "2-digit" }).format(new Date(`${date}T12:00:00Z`))}</span>
+                    <span>→</span>
+                    <span className="font-bold text-foreground">{categoryNames.get(suggestedCategoryId)}</span>
+                  </div>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+        <DialogFooter className="mt-2 flex sm:justify-between items-center">
+          <div className="text-sm text-muted-foreground hidden sm:block">
+            {selected.size} de {suggestions.length} selecionados
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button disabled={selected.size === 0 || isApplying} onClick={apply}>
+              {isApplying ? "Aplicando..." : "Aplicar Categorias"}
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }

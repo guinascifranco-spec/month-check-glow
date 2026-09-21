@@ -2,32 +2,28 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Trash2, LogOut, GripVertical, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, LogOut, GripVertical, Check, Copy, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 import { InstallPWAButton } from "@/components/install-pwa-button";
 import { PageTabs } from "@/components/page-tabs";
 import { MobileNav } from "@/components/mobile-nav";
-import { PeriodBalanceCard } from "@/components/period-balance-card";
+import { BackupButton } from "@/components/backup-button";
 import {
-  getMonthRows,
-  addRow,
-  updateRow,
-  deleteRow,
-  getYearTotals,
-  reorderRows,
-} from "@/lib/month-check.functions";
-
+  getChecklistMonth,
+  addChecklistItem,
+  updateChecklistItem,
+  deleteChecklistItem,
+  reorderChecklistItems,
+  copyFromPreviousMonth,
+  seedTemplate,
+} from "@/lib/checklist.functions";
 
 export const Route = createFileRoute("/_authenticated/conferencia")({
   head: () => ({
     meta: [
       { title: "Conferência — Month Check" },
-      { name: "description", content: "Confira entradas, saídas e saldo do mês." },
-      { property: "og:title", content: "Conferência — Month Check" },
-      { property: "og:description", content: "Confira entradas, saídas e saldo do mês." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { name: "description", content: "Confira entradas e saídas previstas para o mês." },
     ],
   }),
   component: ConferenciaPage,
@@ -57,30 +53,26 @@ function ConferenciaPage() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
 
-  const fetchRows = useServerFn(getMonthRows);
-  const addRowFn = useServerFn(addRow);
-  const updateRowFn = useServerFn(updateRow);
-  const deleteRowFn = useServerFn(deleteRow);
-  const fetchYearTotals = useServerFn(getYearTotals);
-  const reorderRowsFn = useServerFn(reorderRows);
+  const fetchRows = useServerFn(getChecklistMonth);
+  const addRowFn = useServerFn(addChecklistItem);
+  const updateRowFn = useServerFn(updateChecklistItem);
+  const deleteRowFn = useServerFn(deleteChecklistItem);
+  const reorderRowsFn = useServerFn(reorderChecklistItems);
+  const copyPrevFn = useServerFn(copyFromPreviousMonth);
+  const seedTemplateFn = useServerFn(seedTemplate);
 
-  const queryKey = ["month-rows", year, month] as const;
-  const yearKey = ["year-totals", year] as const;
-  const { data: rows = [], isLoading } = useQuery({
+  const queryKey = ["checklist-rows", year, month] as const;
+  
+  const { data = { items: [], isNew: false }, isLoading } = useQuery({
     queryKey,
-    queryFn: () => fetchRows({ data: { year, month } }) as Promise<Row[]>,
+    queryFn: () => fetchRows({ data: { year, month } }) as Promise<{ items: Row[]; isNew: boolean }>,
   });
-  const { data: yearTotals = [] } = useQuery({
-    queryKey: yearKey,
-    queryFn: () =>
-      fetchYearTotals({ data: { year } }) as Promise<
-        Array<{ month: number; entradas: number; saidas: number }>
-      >,
-  });
+  
+  const rows = data.items;
+  const isNew = data.isNew;
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey });
-    queryClient.invalidateQueries({ queryKey: yearKey });
   };
 
   const addMutation = useMutation({
@@ -88,12 +80,25 @@ function ConferenciaPage() {
     onSuccess: invalidateAll,
   });
 
+  const copyMutation = useMutation({
+    mutationFn: () => copyPrevFn({ data: { year, month } }),
+    onSuccess: invalidateAll,
+  });
+
+  const templateMutation = useMutation({
+    mutationFn: () => seedTemplateFn({ data: { year, month } }),
+    onSuccess: invalidateAll,
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteRowFn({ data: { id } }),
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey });
-      const prev = queryClient.getQueryData<Row[]>(queryKey);
-      queryClient.setQueryData<Row[]>(queryKey, (old) => (old ?? []).filter((r) => r.id !== id));
+      const prev = queryClient.getQueryData<{ items: Row[]; isNew: boolean }>(queryKey);
+      queryClient.setQueryData<{ items: Row[]; isNew: boolean }>(queryKey, (old) => ({
+        items: (old?.items ?? []).filter((r) => r.id !== id),
+        isNew: old?.isNew ?? false,
+      }));
       return { prev };
     },
     onError: (_e, _id, ctx) => {
@@ -107,10 +112,11 @@ function ConferenciaPage() {
       updateRowFn({ data: patch }),
     onMutate: async (patch) => {
       await queryClient.cancelQueries({ queryKey });
-      const prev = queryClient.getQueryData<Row[]>(queryKey);
-      queryClient.setQueryData<Row[]>(queryKey, (old) =>
-        (old ?? []).map((r) => (r.id === patch.id ? { ...r, ...patch } : r)),
-      );
+      const prev = queryClient.getQueryData<{ items: Row[]; isNew: boolean }>(queryKey);
+      queryClient.setQueryData<{ items: Row[]; isNew: boolean }>(queryKey, (old) => ({
+        items: (old?.items ?? []).map((r) => (r.id === patch.id ? { ...r, ...patch } : r)),
+        isNew: old?.isNew ?? false,
+      }));
       return { prev };
     },
     onError: (_e, _p, ctx) => {
@@ -128,18 +134,21 @@ function ConferenciaPage() {
 
   function handleDrop(targetId: string) {
     if (!dragId || dragId === targetId) { setDragId(null); return; }
-    const current = queryClient.getQueryData<Row[]>(queryKey) ?? rows;
+    const current = queryClient.getQueryData<{ items: Row[]; isNew: boolean }>(queryKey)?.items ?? rows;
     const src = current.find((r) => r.id === dragId);
     const tgt = current.find((r) => r.id === targetId);
     if (!src || !tgt || src.tipo !== tgt.tipo) { setDragId(null); return; }
     const without = current.filter((r) => r.id !== dragId);
     const targetIdx = without.findIndex((r) => r.id === targetId);
-    const reordered = [...without.slice(0, targetIdx), src, ...without.slice(targetIdx)];
-    queryClient.setQueryData<Row[]>(queryKey, reordered);
-    reorderMutation.mutate(reordered.map((r) => r.id));
+    const reorderedItems = [...without.slice(0, targetIdx), src, ...without.slice(targetIdx)];
+    
+    queryClient.setQueryData<{ items: Row[]; isNew: boolean }>(queryKey, (old) => ({
+      items: reorderedItems,
+      isNew: old?.isNew ?? false,
+    }));
+    reorderMutation.mutate(reorderedItems.map((r) => r.id));
     setDragId(null);
   }
-
 
   const totals = useMemo(() => {
     let entradas = 0, saidas = 0;
@@ -175,10 +184,11 @@ function ConferenciaPage() {
             <Logo height={40} />
             <div className="min-w-0">
               <h1 className="truncate text-xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
-              <p className="truncate text-sm text-muted-foreground">Conferência financeira mensal</p>
+              <p className="truncate text-sm text-muted-foreground">Conferência de Planejamento</p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <BackupButton />
             <InstallPWAButton />
             <button
               onClick={signOut}
@@ -193,15 +203,13 @@ function ConferenciaPage() {
           <PageTabs />
         </div>
 
-
-
         {/* Month selector */}
         <div className="neu-raised mb-6 flex items-center justify-between rounded-2xl p-4">
           <button onClick={prevMonth} className="neu-pressable min-h-[44px] min-w-[44px] rounded-xl p-3 text-primary">
             <ChevronLeft className="h-5 w-5" />
           </button>
           <div className="min-w-0 text-center">
-            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Período</div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Período Planejado</div>
             <div className="truncate text-xl font-bold sm:text-2xl">{MESES[month - 1]} {year}</div>
           </div>
           <button onClick={nextMonth} className="neu-pressable min-h-[44px] min-w-[44px] rounded-xl p-3 text-primary">
@@ -214,22 +222,47 @@ function ConferenciaPage() {
           <SummaryCard label="Total Entradas" value={totals.entradas} tone="success" />
           <SummaryCard label="Total Saídas" value={totals.saidas} tone="danger" />
           <SummaryCard
-            label="Saldo do Mês"
+            label="Planejado"
             value={totals.saldo}
             tone={totals.saldo >= 0 ? "success" : "danger"}
             emphasize
           />
         </div>
 
-        {/* Saldo disponível por período */}
-        <PeriodBalanceCard saldo={totals.saldo} year={year} month={month} isLoading={isLoading} />
+        {/* Empty State Banner */}
+        {!isLoading && isNew && rows.length === 0 && (
+          <div className="neu-raised mb-6 rounded-2xl p-6 text-center">
+            <h3 className="mb-2 text-lg font-bold">Mês Vazio</h3>
+            <p className="mb-6 text-sm text-muted-foreground">
+              Você ainda não tem nenhum planejamento para {MESES[month - 1]} {year}. Como deseja começar?
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <button
+                onClick={() => copyMutation.mutate()}
+                disabled={copyMutation.isPending}
+                className="neu-pressable inline-flex h-12 items-center justify-center gap-2 rounded-xl px-6 font-semibold text-primary"
+              >
+                <Copy className="h-5 w-5" />
+                Copiar do mês passado
+              </button>
+              <button
+                onClick={() => templateMutation.mutate()}
+                disabled={templateMutation.isPending}
+                className="neu-pressable inline-flex h-12 items-center justify-center gap-2 rounded-xl px-6 font-semibold text-secondary"
+              >
+                <Wand2 className="h-5 w-5" />
+                Usar Template Padrão
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Mobile list */}
         <div className="space-y-3 md:hidden">
           {isLoading && (
             <div className="neu-raised rounded-2xl p-4 sm:p-6 text-center text-muted-foreground">Carregando...</div>
           )}
-          {!isLoading && rows.length === 0 && (
+          {!isLoading && !isNew && rows.length === 0 && (
             <div className="neu-raised rounded-2xl p-4 sm:p-6 text-center text-sm text-muted-foreground">
               Nenhuma linha. Adicione uma entrada ou saída.
             </div>
@@ -268,7 +301,7 @@ function ConferenciaPage() {
                 {isLoading && (
                   <tr><td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Carregando...</td></tr>
                 )}
-                {!isLoading && rows.length === 0 && (
+                {!isLoading && !isNew && rows.length === 0 && (
                   <tr><td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Nenhuma linha. Adicione uma entrada ou saída.</td></tr>
                 )}
                 {rows.map((row) => (
@@ -287,12 +320,6 @@ function ConferenciaPage() {
             </table>
           </div>
         </div>
-
-        {/* Thermometer chart */}
-        <MonthThermometer entradas={totals.entradas} saidas={totals.saidas} />
-
-        <YearLineChart data={yearTotals} currentMonth={month} year={year} />
-
 
         {/* Add buttons */}
         <div className="mt-6 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:justify-end">
@@ -460,7 +487,6 @@ function RowCard({
   );
 }
 
-
 function SummaryCard({
   label, value, tone, emphasize,
 }: { label: string; value: number; tone: "success" | "danger"; emphasize?: boolean }) {
@@ -472,238 +498,6 @@ function SummaryCard({
     </div>
   );
 }
-
-function MonthThermometer({ entradas, saidas }: { entradas: number; saidas: number }) {
-  const hasEntradas = entradas > 0;
-  const rawPct = hasEntradas ? (saidas / entradas) * 100 : 0;
-  const pct = Math.min(rawPct, 100);
-  const overBudget = rawPct > 100;
-  const restante = entradas - saidas;
-
-  // Color shifts from primary (safe) → amber (warning) → danger (over)
-  let fillColor = "var(--color-primary)";
-  if (rawPct >= 100) fillColor = "var(--color-danger)";
-  else if (rawPct >= 75) fillColor = "oklch(0.78 0.16 75)";
-
-  return (
-    <div className="neu-raised mt-6 rounded-2xl p-4 sm:p-6">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Saídas vs Entradas
-          </div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            {hasEntradas
-              ? `${brl.format(saidas)} de ${brl.format(entradas)} comprometidos`
-              : "Adicione uma entrada para visualizar o termômetro"}
-          </div>
-        </div>
-        <div className="text-right">
-          <div
-            className="text-3xl font-bold tabular-nums"
-            style={{ color: hasEntradas ? fillColor : "var(--color-muted-foreground)" }}
-          >
-            {hasEntradas ? `${rawPct.toFixed(0)}%` : "—"}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {hasEntradas
-              ? overBudget
-                ? `Excedeu ${brl.format(saidas - entradas)}`
-                : `Resta ${brl.format(restante)}`
-              : "sem dados"}
-          </div>
-        </div>
-      </div>
-
-      {/* Bullet bar */}
-      <div className="neu-inset relative h-6 w-full overflow-hidden rounded-full">
-        {/* tick markers at 50% and 75% */}
-        <div className="pointer-events-none absolute inset-y-0 left-1/2 w-px bg-foreground/10" />
-        <div className="pointer-events-none absolute inset-y-0 left-3/4 w-px bg-foreground/10" />
-        <div
-          className="h-full rounded-full transition-[width,background-color] duration-500 ease-out"
-          style={{
-            width: `${pct}%`,
-            backgroundColor: fillColor,
-            boxShadow: "0 0 12px 0 color-mix(in oklch, currentColor 35%, transparent)",
-            color: fillColor,
-          }}
-        />
-      </div>
-
-      <div className="mt-2 flex justify-between text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-        <span>0%</span>
-        <span>50%</span>
-        <span>75%</span>
-        <span>100%</span>
-      </div>
-    </div>
-  );
-}
-
-type MonthTotal = { month: number; entradas: number; saidas: number };
-
-const MES_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-
-function YearLineChart({
-  data,
-  currentMonth,
-  year,
-}: {
-  data: MonthTotal[];
-  currentMonth: number;
-  year: number;
-}) {
-  const points = data.length === 12
-    ? data
-    : Array.from({ length: 12 }, (_, i) => ({ month: i + 1, entradas: 0, saidas: 0 }));
-
-  const max = Math.max(
-    1,
-    ...points.map((p) => Math.max(p.entradas, p.saidas)),
-  );
-
-  // SVG geometry
-  const W = 720;
-  const H = 260;
-  const padL = 56;
-  const padR = 16;
-  const padT = 16;
-  const padB = 32;
-  const innerW = W - padL - padR;
-  const innerH = H - padT - padB;
-  const stepX = innerW / 11;
-
-  const x = (i: number) => padL + stepX * i;
-  const y = (v: number) => padT + innerH - (v / max) * innerH;
-
-  const pathFor = (key: "entradas" | "saidas") =>
-    points.map((p, i) => `${i === 0 ? "M" : "L"} ${x(i).toFixed(2)} ${y(p[key]).toFixed(2)}`).join(" ");
-
-  const areaFor = (key: "entradas" | "saidas") =>
-    `${pathFor(key)} L ${x(11).toFixed(2)} ${(padT + innerH).toFixed(2)} L ${x(0).toFixed(2)} ${(padT + innerH).toFixed(2)} Z`;
-
-  // 4 gridlines
-  const gridVals = [0, 0.25, 0.5, 0.75, 1].map((f) => f * max);
-
-  const fmtCompact = (n: number) => {
-    if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`;
-    return n.toFixed(0);
-  };
-
-  const totalEntradas = points.reduce((s, p) => s + p.entradas, 0);
-  const totalSaidas = points.reduce((s, p) => s + p.saidas, 0);
-
-  return (
-    <div className="neu-raised mt-6 rounded-2xl p-4 sm:p-6" aria-label={`Gráfico anual de entradas e saídas em ${year}`}>
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Visão anual {year}
-          </div>
-          <div className="mt-1 text-sm text-muted-foreground">
-            Entradas vs saídas por mês
-          </div>
-        </div>
-        <div className="flex items-center gap-4 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "var(--color-primary)" }} />
-            <span className="font-medium text-muted-foreground">Entradas</span>
-            <span className="font-semibold tabular-nums" style={{ color: "var(--color-primary)" }}>
-              {brl.format(totalEntradas)}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "var(--color-danger)" }} />
-            <span className="font-medium text-muted-foreground">Saídas</span>
-            <span className="font-semibold tabular-nums" style={{ color: "var(--color-danger)" }}>
-              {brl.format(totalSaidas)}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="w-full overflow-hidden">
-        <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img">
-          <title>Entradas e saídas por mês em {year}</title>
-
-          {/* Gridlines + Y labels */}
-          {gridVals.map((v, i) => {
-            const yy = y(v);
-            return (
-              <g key={i}>
-                <line
-                  x1={padL} x2={W - padR} y1={yy} y2={yy}
-                  stroke="currentColor"
-                  className="text-foreground/10"
-                  strokeWidth={1}
-                />
-                <text
-                  x={padL - 8} y={yy + 3}
-                  textAnchor="end"
-                  className="fill-muted-foreground"
-                  style={{ fontSize: 10 }}
-                >
-                  {fmtCompact(v)}
-                </text>
-              </g>
-            );
-          })}
-
-          {/* Current month highlight */}
-          <line
-            x1={x(currentMonth - 1)} x2={x(currentMonth - 1)}
-            y1={padT} y2={padT + innerH}
-            stroke="currentColor"
-            className="text-primary/30"
-            strokeWidth={1}
-            strokeDasharray="3 3"
-          />
-
-          {/* Areas */}
-          <path d={areaFor("entradas")} fill="var(--color-primary)" opacity={0.12} />
-          <path d={areaFor("saidas")} fill="var(--color-danger)" opacity={0.12} />
-
-          {/* Lines */}
-          <path d={pathFor("entradas")} fill="none" stroke="var(--color-primary)" strokeWidth={2.5}
-                strokeLinecap="round" strokeLinejoin="round" />
-          <path d={pathFor("saidas")} fill="none" stroke="var(--color-danger)" strokeWidth={2.5}
-                strokeLinecap="round" strokeLinejoin="round" />
-
-          {/* Points + X labels */}
-          {points.map((p, i) => {
-            const isCurrent = p.month === currentMonth;
-            return (
-              <g key={i}>
-                <circle cx={x(i)} cy={y(p.entradas)} r={isCurrent ? 4 : 3}
-                        fill="var(--color-background)"
-                        stroke="var(--color-primary)" strokeWidth={2}>
-                  <title>{`${MES_ABBR[i]} — Entradas: ${brl.format(p.entradas)}`}</title>
-                </circle>
-                <circle cx={x(i)} cy={y(p.saidas)} r={isCurrent ? 4 : 3}
-                        fill="var(--color-background)"
-                        stroke="var(--color-danger)" strokeWidth={2}>
-                  <title>{`${MES_ABBR[i]} — Saídas: ${brl.format(p.saidas)}`}</title>
-                </circle>
-                <text
-                  x={x(i)} y={H - 10}
-                  textAnchor="middle"
-                  className={isCurrent ? "fill-foreground font-semibold" : "fill-muted-foreground"}
-                  style={{ fontSize: 11 }}
-                >
-                  {MES_ABBR[i]}
-                </text>
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-    </div>
-  );
-}
-
-
-
 
 function RowItem({
   row, onUpdate, onDelete, isDragging, onDragStart, onDragEnd, onDropRow,
@@ -722,8 +516,6 @@ function RowItem({
   const descFocused = useRef(false);
   const valorFocused = useRef(false);
 
-  // Only re-sync from server when the input isn't focused AND the value
-  // truly diverges numerically — never overwrite the user mid-typing.
   useEffect(() => {
     if (descFocused.current) return;
     if (descricao !== row.descricao) setDescricao(row.descricao);

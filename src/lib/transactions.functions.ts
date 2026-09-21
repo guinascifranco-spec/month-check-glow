@@ -11,6 +11,8 @@ const DEFAULT_CATEGORIES = [
   ["Assinaturas", "blue"],
   ["Educação", "pink"],
   ["Outros", "gray"],
+  ["Restaurantes e Bares", "fuchsia"],
+  ["Streaming", "indigo"],
 ] as const;
 
 const idSchema = z.string().uuid();
@@ -58,7 +60,13 @@ export const getTransactionWorkspace = createServerFn({ method: "POST" })
       const effectiveDate = row.transaction_date ?? `${row.year}-${String(row.month).padStart(2, "0")}-01`;
       return effectiveDate >= data.from && effectiveDate <= data.to;
     });
-    return { categories: categories ?? [], rows: filtered };
+    const { data: rules, error: rulesError } = await supabase
+      .from("category_rules")
+      .select("id, keyword, category_id")
+      .eq("user_id", userId);
+    if (rulesError) throw new Error(rulesError.message);
+
+    return { categories: categories ?? [], rules: rules ?? [], rows: filtered };
   });
 
 export const createTransaction = createServerFn({ method: "POST" })
@@ -161,5 +169,41 @@ export const deleteExpenseCategory = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("expense_categories").delete().eq("id", data.id).eq("user_id", context.userId);
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const createCategoryRule = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { keyword: string; categoryId: string }) => z.object({ keyword: z.string().trim().min(1).max(100), categoryId: idSchema }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("category_rules").insert({ user_id: context.userId, keyword: data.keyword.toLowerCase(), category_id: data.categoryId });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteCategoryRule = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string }) => z.object({ id: idSchema }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("category_rules").delete().eq("id", data.id).eq("user_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const applyCategoryRules = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { updates: Array<{ id: string; categoryId: string }> }) =>
+    z.object({ updates: z.array(z.object({ id: idSchema, categoryId: idSchema })) }).parse(input)
+  )
+  .handler(async ({ data, context }) => {
+    await Promise.all(
+      data.updates.map((update) =>
+        context.supabase
+          .from("month_check_rows")
+          .update({ category_id: update.categoryId })
+          .eq("id", update.id)
+          .eq("user_id", context.userId)
+      )
+    );
     return { ok: true };
   });
