@@ -4,7 +4,7 @@
 - [x] Calcular projeção combinando lançamentos e parcelas
 - [x] Criar a página Visão Futura com resumos, gráficos e eventos
 - [x] Integrar a nova página às navegações desktop e mobile
-- [ ] Validar cálculos, interação e visual responsivo
+- [x] Validar cálculos, interação e visual responsivo
 
 # Lançamentos
 
