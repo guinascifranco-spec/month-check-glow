@@ -9,6 +9,6 @@
 # Lançamentos
 
 - [x] Criar categorias editáveis e campos de data/categoria
-- [ ] Criar cadastro e filtros unificados com a Conferência
-- [ ] Criar gráficos de distribuição por categoria e mês
-- [ ] Validar sincronização e responsividade
+- [x] Criar cadastro e filtros unificados com a Conferência
+- [x] Criar gráficos de distribuição por categoria e mês
+- [x] Validar sincronização e responsividade
