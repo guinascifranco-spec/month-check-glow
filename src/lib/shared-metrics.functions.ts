@@ -113,7 +113,7 @@ export const getMonthTotals = createServerFn({ method: "POST" })
 
 /**
  * Retorna histórico mês a mês com saldo acumulado + patrimônio total.
- * Usa ativos.saldo_atual como base do total investido (soma dos ativos).
+ * Usa os aportes registrados como base do total investido.
  * Patrimônio = saldo acumulado + total investido.
  */
 export const getAccumulatedWithPatrimony = createServerFn({ method: "GET" })
@@ -121,24 +121,24 @@ export const getAccumulatedWithPatrimony = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
 
-    const [monthlyResult, ativosResult] = await Promise.all([
+    const [monthlyResult, aportesResult] = await Promise.all([
       supabase
         .from("month_check_rows")
         .select("year, month, tipo, valor")
         .eq("user_id", userId)
         .not("transaction_date", "is", null),
       supabase
-        .from("ativos")
-        .select("saldo_atual")
+        .from("aportes")
+        .select("valor_total")
         .eq("user_id", userId),
     ]);
 
     if (monthlyResult.error) throw new Error(monthlyResult.error.message);
-    if (ativosResult.error) throw new Error(ativosResult.error.message);
+    if (aportesResult.error) throw new Error(aportesResult.error.message);
 
-    // Calcular total investido atual (soma dos saldos_atuais dos ativos)
-    const totalInvestido = (ativosResult.data ?? []).reduce(
-      (s, a) => s + (Number(a.saldo_atual) || 0),
+    // Calcular total investido atual pela soma dos aportes registrados.
+    const totalInvestido = (aportesResult.data ?? []).reduce(
+      (s, aporte) => s + (Number(aporte.valor_total) || 0),
       0,
     );
 

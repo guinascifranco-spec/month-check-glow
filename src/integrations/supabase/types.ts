@@ -94,6 +94,83 @@ export type Database = {
         }
         Relationships: []
       }
+      category_rules: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          keyword: string
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          keyword: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          keyword?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "category_rules_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_items: {
+        Row: {
+          created_at: string
+          descricao: string
+          expense_class: string
+          id: string
+          month: number
+          position: number
+          quitado: boolean
+          tipo: string
+          updated_at: string
+          user_id: string
+          valor: number
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string
+          expense_class?: string
+          id?: string
+          month: number
+          position?: number
+          quitado?: boolean
+          tipo: string
+          updated_at?: string
+          user_id: string
+          valor?: number
+          year: number
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          expense_class?: string
+          id?: string
+          month?: number
+          position?: number
+          quitado?: boolean
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+          year?: number
+        }
+        Relationships: []
+      }
       expense_categories: {
         Row: {
           color_key: string
