@@ -24,6 +24,7 @@ import {
   deleteCategoryRule,
   applyCategoryRules,
 } from "@/lib/transactions.functions";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
 
 export const Route = createFileRoute("/_authenticated/lancamentos")({
   head: () => ({ meta: [
@@ -132,6 +133,34 @@ function TransactionsPage() {
     return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0])); // newest first
   }, [rows]);
 
+  const categoryChartData = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const row of rows) {
+      if (row.tipo === "saida" && row.valor > 0) {
+        const catName = row.category_id ? (categoryNames.get(row.category_id) ?? "Desconhecida") : "Sem categoria";
+        map.set(catName, (map.get(catName) || 0) + Number(row.valor));
+      }
+    }
+    return Array.from(map.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  }, [rows, categoryNames]);
+
+  const monthlyChartData = useMemo(() => {
+    const arr = [...groupedRows].reverse();
+    return arr.map(([key, groupRows]) => {
+      let income = 0;
+      let expense = 0;
+      for (const r of groupRows) {
+        if (r.tipo === "entrada") income += Number(r.valor) || 0;
+        else expense += Number(r.valor) || 0;
+      }
+      const [y, m] = key.split("-");
+      const label = `${MONTHS[parseInt(m, 10) - 1].slice(0,3)}/${y.slice(2)}`;
+      return { label, Entradas: income, Saídas: expense };
+    });
+  }, [groupedRows]);
+
+  const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#64748b'];
+
   // Suggestions
   const suggestions = useMemo(() => {
     return rows
@@ -209,6 +238,46 @@ function TransactionsPage() {
               <p className="text-sm text-muted-foreground">Encontramos {suggestions.length} lançamentos sem categoria que combinam com suas regras.</p>
             </div>
             <Button onClick={() => setReviewOpen(true)} variant="secondary" className="shrink-0">Revisar {suggestions.length} sugestões</Button>
+          </div>
+        )}
+
+        {!isLoading && rows.length > 0 && (
+          <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="neu-raised rounded-2xl p-4 sm:p-6 flex flex-col">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">Despesas por Categoria</h3>
+              <div className="h-[250px] w-full">
+                {categoryChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={categoryChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2}>
+                        {categoryChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => brl.format(value)} contentStyle={{ borderRadius: '8px', border: 'none', backgroundColor: 'hsl(var(--background))', color: 'hsl(var(--foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                      <Legend verticalAlign="middle" align="right" layout="vertical" wrapperStyle={{ fontSize: '12px' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <Empty text="Nenhuma despesa para exibir no gráfico." />
+                )}
+              </div>
+            </div>
+
+            <div className="neu-raised rounded-2xl p-4 sm:p-6 flex flex-col">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">Evolução Mensal</h3>
+              <div className="h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.3)" />
+                    <XAxis dataKey="label" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                    <YAxis tickFormatter={(val) => `R$${val > 1000 ? (val/1000).toFixed(0)+'k' : val}`} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                    <Tooltip cursor={{ fill: 'hsl(var(--muted)/0.3)' }} formatter={(value: number) => brl.format(value)} contentStyle={{ borderRadius: '8px', border: 'none', backgroundColor: 'hsl(var(--background))', color: 'hsl(var(--foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                    <Bar dataKey="Entradas" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    <Bar dataKey="Saídas" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
         )}
 
