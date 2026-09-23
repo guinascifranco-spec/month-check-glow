@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { LogOut, Plus, Trash2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { LogOut } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -21,13 +21,8 @@ import { InstallPWAButton } from "@/components/install-pwa-button";
 import { PageTabs } from "@/components/page-tabs";
 import { MobileNav } from "@/components/mobile-nav";
 import { Slider } from "@/components/ui/slider";
-import {
-  addInvestment,
-  deleteInvestment,
-  getAllMonthlyTotals,
-  listInvestments,
-  updateInvestment,
-} from "@/lib/investments.functions";
+import { getAccumulatedWithPatrimony } from "@/lib/shared-metrics.functions";
+import { listAtivos } from "@/lib/investments-portfolio.functions";
 
 export const Route = createFileRoute("/_authenticated/visao-geral")({
   head: () => ({
@@ -43,20 +38,31 @@ export const Route = createFileRoute("/_authenticated/visao-geral")({
   component: VisaoGeralPage,
 });
 
-type Investment = {
+type Ativo = {
   id: string;
-  category: string;
-  balance: number;
-  monthly_return_pct: number;
-  position: number;
+  tipo: string;
+  nome: string;
+  corretora: string | null;
+  saldo_atual: number;
+  rentabilidade_mensal_pct: number;
 };
 
-type MonthTotal = {
+type MonthSnapshot = {
   year: number;
   month: number;
   entradas: number;
   saidas: number;
   saldo: number;
+  saldoAcumulado: number;
+  totalInvestido: number;
+  patrimonioTotal: number;
+};
+
+type PatrimonyData = {
+  months: MonthSnapshot[];
+  totalInvestido: number;
+  saldoAcumulado: number;
+  patrimonioTotal: number;
 };
 
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -67,93 +73,46 @@ function VisaoGeralPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const fetchInvestments = useServerFn(listInvestments);
-  const addFn = useServerFn(addInvestment);
-  const updateFn = useServerFn(updateInvestment);
-  const deleteFn = useServerFn(deleteInvestment);
-  const fetchTotals = useServerFn(getAllMonthlyTotals);
+  const fetchPatrimony = useServerFn(getAccumulatedWithPatrimony);
+  const fetchAtivos = useServerFn(listAtivos);
 
-  const invKey = ["investments"] as const;
-  const totalsKey = ["all-monthly-totals"] as const;
+  const patrimonyKey = ["patrimony-accumulated"] as const;
+  const ativosKey = ["ativos"] as const;
 
-  const { data: investments = [] } = useQuery({
-    queryKey: invKey,
-    queryFn: () => fetchInvestments() as Promise<Investment[]>,
+  const { data: patrimony } = useQuery({
+    queryKey: patrimonyKey,
+    queryFn: () => fetchPatrimony() as Promise<PatrimonyData>,
   });
 
-  const { data: monthly = [] } = useQuery({
-    queryKey: totalsKey,
-    queryFn: () => fetchTotals() as Promise<MonthTotal[]>,
+  const { data: ativos = [] } = useQuery({
+    queryKey: ativosKey,
+    queryFn: () => fetchAtivos() as Promise<Ativo[]>,
   });
 
-  const addMutation = useMutation({
-    mutationFn: () => addFn(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: invKey }),
-  });
+  const monthly = patrimony?.months ?? [];
+  const totalInvestido = patrimony?.totalInvestido ?? 0;
+  const saldoAcumulado = patrimony?.saldoAcumulado ?? 0;
+  const patrimonioTotal = patrimony?.patrimonioTotal ?? 0;
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteFn({ data: { id } }),
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: invKey });
-      const prev = queryClient.getQueryData<Investment[]>(invKey);
-      queryClient.setQueryData<Investment[]>(invKey, (old) => (old ?? []).filter((r) => r.id !== id));
-      return { prev };
-    },
-    onError: (_e, _id, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(invKey, ctx.prev);
-    },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: invKey }),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: (patch: { id: string; category?: string; balance?: number; monthly_return_pct?: number }) =>
-      updateFn({ data: patch }),
-    onMutate: async (patch) => {
-      await queryClient.cancelQueries({ queryKey: invKey });
-      const prev = queryClient.getQueryData<Investment[]>(invKey);
-      queryClient.setQueryData<Investment[]>(invKey, (old) =>
-        (old ?? []).map((r) => (r.id === patch.id ? { ...r, ...patch } : r)),
-      );
-      return { prev };
-    },
-    onError: (_e, _p, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(invKey, ctx.prev);
-    },
-  });
-
-  // Aggregates
-  const totalInvestido = useMemo(
-    () => investments.reduce((s, i) => s + (Number(i.balance) || 0), 0),
-    [investments],
-  );
+  // Rendimento mensal estimado (soma de saldo_atual × rentabilidade_mensal_pct / 100)
   const rendimentoMensal = useMemo(
     () =>
-      investments.reduce(
-        (s, i) => s + ((Number(i.balance) || 0) * (Number(i.monthly_return_pct) || 0)) / 100,
+      ativos.reduce(
+        (s, a) => s + ((Number(a.saldo_atual) || 0) * (Number(a.rentabilidade_mensal_pct) || 0)) / 100,
         0,
       ),
-    [investments],
+    [ativos],
   );
-  const saldoAcumulado = useMemo(
-    () => monthly.reduce((s, m) => s + m.saldo, 0),
-    [monthly],
-  );
-  const patrimonioTotal = saldoAcumulado + totalInvestido;
 
-  // Historical chart data: saldo mensal (barra), saldo acumulado (linha),
-  // patrimônio total = saldo acumulado + totalInvestido (constante atual).
+  // Historical chart data
   const histData = useMemo(() => {
-    let acc = 0;
-    return monthly.map((m) => {
-      acc += m.saldo;
-      return {
-        label: monthLabel(m.year, m.month),
-        saldoMensal: m.saldo,
-        saldoAcumulado: acc,
-        patrimonioTotal: acc + totalInvestido,
-      };
-    });
-  }, [monthly, totalInvestido]);
+    return monthly.map((m) => ({
+      label: monthLabel(m.year, m.month),
+      saldoMensal: m.saldo,
+      saldoAcumulado: m.saldoAcumulado,
+      patrimonioTotal: m.patrimonioTotal,
+    }));
+  }, [monthly]);
 
   // Projection
   const [horizon, setHorizon] = useState(12);
@@ -176,11 +135,10 @@ function VisaoGeralPage() {
       proj: null as number | null,
     }));
 
-    const lastReal = histData.length > 0 ? histData[histData.length - 1].patrimonioTotal : totalInvestido;
+    const lastReal = histData.length > 0 ? histData[histData.length - 1].patrimonioTotal : patrimonioTotal;
     let patrimonio = lastReal;
 
     const proj: Array<{ label: string; real: number | null; proj: number }> = [];
-    // Anchor projection start at last real point for visual continuity
     if (real.length > 0) {
       proj.push({ label: real[real.length - 1].label, real: lastReal, proj: lastReal });
     }
@@ -195,10 +153,9 @@ function VisaoGeralPage() {
       proj.push({ label: monthLabel(y, mo), real: null, proj: patrimonio });
     }
 
-    // Merge: keep `real` series only on real points, `proj` only on projected
     const merged = [...real.slice(0, -1), ...proj];
     return { data: merged, base, finalValue: patrimonio, rate };
-  }, [monthly, histData, totalInvestido, rendimentoMensal, horizon, modoContribuicao, saldoMensalFixo]);
+  }, [monthly, histData, patrimonioTotal, totalInvestido, rendimentoMensal, horizon, modoContribuicao, saldoMensalFixo]);
 
   const ganhoProjetado = projData.finalValue - patrimonioTotal;
 
@@ -281,65 +238,47 @@ function VisaoGeralPage() {
 
         {/* Investimentos */}
         <section className="neu-raised mb-8 rounded-2xl p-4 sm:p-6">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Investimentos
-              </div>
-              <div className="mt-1 text-sm text-muted-foreground">
-                Cadastre categorias, saldos e rentabilidade mensal estimada.
-              </div>
+          <div className="mb-4">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Investimentos
             </div>
-            <button
-              onClick={() => addMutation.mutate()}
-              className="neu-pressable inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-primary"
-            >
-              <Plus className="h-4 w-4" /> Adicionar
-            </button>
+            <div className="mt-1 text-sm text-muted-foreground">
+              Gerencie seus ativos e saldos na aba{" "}
+              <a href="/investimentos" className="font-semibold text-primary underline-offset-2 hover:underline">
+                Investimentos
+              </a>
+              .
+            </div>
           </div>
 
-          {/* Mobile: cards empilhados */}
-          <div className="space-y-3 md:hidden">
-            {investments.length === 0 && (
-              <div className="neu-inset rounded-xl p-6 text-center text-sm text-muted-foreground">
-                Nenhum investimento cadastrado.
-              </div>
-            )}
-            {investments.map((inv) => (
-              <InvestmentCard
-                key={inv.id}
-                investment={inv}
-                onPatch={(p) => updateMutation.mutate({ id: inv.id, ...p })}
-                onDelete={() => deleteMutation.mutate(inv.id)}
-              />
-            ))}
-          </div>
-
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <th className="px-3 py-3">Categoria</th>
-                  <th className="px-3 py-3 text-right">Saldo (R$)</th>
-                  <th className="px-3 py-3 text-right">Rentab. mensal (%)</th>
-                  <th className="px-3 py-3 text-right">Ação</th>
-                </tr>
-              </thead>
-              <tbody>
-                {investments.length === 0 && (
-                  <tr><td colSpan={4} className="px-3 py-10 text-center text-muted-foreground">Nenhum investimento cadastrado.</td></tr>
-                )}
-                {investments.map((inv) => (
-                  <InvestmentRow
-                    key={inv.id}
-                    investment={inv}
-                    onPatch={(p) => updateMutation.mutate({ id: inv.id, ...p })}
-                    onDelete={() => deleteMutation.mutate(inv.id)}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {ativos.length === 0 ? (
+            <div className="neu-inset rounded-xl p-6 text-center text-sm text-muted-foreground">
+              Nenhum ativo cadastrado. Acesse a aba Investimentos para adicionar.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th className="px-3 py-3">Ativo</th>
+                    <th className="px-3 py-3">Tipo</th>
+                    <th className="px-3 py-3 text-right">Saldo Atual (R$)</th>
+                    <th className="px-3 py-3 text-right">Rentab. mensal (%)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ativos.map((a) => (
+                    <tr key={a.id} className="border-t border-border/60">
+                      <td className="px-3 py-2 font-medium">{a.nome}</td>
+                      <td className="px-3 py-2 text-muted-foreground capitalize">{a.tipo.replace("_", " ")}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{brl.format(Number(a.saldo_atual))}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{Number(a.rentabilidade_mensal_pct).toFixed(2)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <SummaryCard label="Total investido" value={totalInvestido} tone="secondary" />
@@ -512,203 +451,4 @@ function EmptyChart({ text }: { text: string }) {
   );
 }
 
-function InvestmentRow({
-  investment,
-  onPatch,
-  onDelete,
-}: {
-  investment: Investment;
-  onPatch: (p: { category?: string; balance?: number; monthly_return_pct?: number }) => void;
-  onDelete: () => void;
-}) {
-  const [category, setCategory] = useState(investment.category);
-  const [balance, setBalance] = useState(String(investment.balance ?? 0));
-  const [pct, setPct] = useState(String(investment.monthly_return_pct ?? 0));
-  const catFocused = useRef(false);
-  const balFocused = useRef(false);
-  const pctFocused = useRef(false);
 
-  // Sync from server only when not focused and the value truly diverges.
-  useEffect(() => {
-    if (!catFocused.current && category !== investment.category) {
-      setCategory(investment.category);
-    }
-    if (!balFocused.current) {
-      const n = parseFloat(balance.replace(",", ".")) || 0;
-      if (n !== Number(investment.balance)) setBalance(String(investment.balance ?? 0));
-    }
-    if (!pctFocused.current) {
-      const n = parseFloat(pct.replace(",", ".")) || 0;
-      if (n !== Number(investment.monthly_return_pct)) setPct(String(investment.monthly_return_pct ?? 0));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [investment.id, investment.category, investment.balance, investment.monthly_return_pct]);
-
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const debounce = (fn: () => void) => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(fn, 1000);
-  };
-
-  return (
-    <tr className="border-t border-border/60">
-      <td className="px-3 py-2">
-        <input
-          value={category}
-          onFocus={() => { catFocused.current = true; }}
-          onBlur={() => { catFocused.current = false; }}
-          onChange={(e) => {
-            setCategory(e.target.value);
-            const v = e.target.value;
-            debounce(() => onPatch({ category: v }));
-          }}
-          placeholder="Renda Fixa, Ações…"
-          className="neu-inset w-full rounded-xl bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-        />
-      </td>
-      <td className="px-3 py-2">
-        <input
-          type="text"
-          inputMode="decimal"
-          pattern="[0-9.,]*"
-          value={balance}
-          onFocus={() => { balFocused.current = true; }}
-          onBlur={() => { balFocused.current = false; }}
-          onChange={(e) => {
-            const raw = e.target.value;
-            setBalance(raw);
-            const n = parseFloat(raw.replace(",", "."));
-            if (!Number.isNaN(n)) debounce(() => onPatch({ balance: n }));
-          }}
-          className="neu-inset w-full rounded-xl bg-transparent px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-2 focus:ring-primary/30"
-        />
-      </td>
-      <td className="px-3 py-2">
-        <input
-          type="text"
-          inputMode="decimal"
-          pattern="[0-9.,]*"
-          value={pct}
-          onFocus={() => { pctFocused.current = true; }}
-          onBlur={() => { pctFocused.current = false; }}
-          onChange={(e) => {
-            const raw = e.target.value;
-            setPct(raw);
-            const n = parseFloat(raw.replace(",", "."));
-            if (!Number.isNaN(n)) debounce(() => onPatch({ monthly_return_pct: n }));
-          }}
-          className="neu-inset w-full rounded-xl bg-transparent px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-2 focus:ring-primary/30"
-        />
-      </td>
-      <td className="px-3 py-2 text-right">
-        <button
-          onClick={onDelete}
-          className="neu-pressable inline-flex items-center justify-center rounded-xl p-2 text-danger"
-          aria-label="Remover investimento"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </td>
-    </tr>
-  );
-}
-
-function InvestmentCard({
-  investment,
-  onPatch,
-  onDelete,
-}: {
-  investment: Investment;
-  onPatch: (p: { category?: string; balance?: number; monthly_return_pct?: number }) => void;
-  onDelete: () => void;
-}) {
-  const [category, setCategory] = useState(investment.category);
-  const [balance, setBalance] = useState(String(investment.balance ?? 0));
-  const [pct, setPct] = useState(String(investment.monthly_return_pct ?? 0));
-  const catFocused = useRef(false);
-  const balFocused = useRef(false);
-  const pctFocused = useRef(false);
-
-  useEffect(() => {
-    if (!catFocused.current && category !== investment.category) setCategory(investment.category);
-    if (!balFocused.current) {
-      const n = parseFloat(balance.replace(",", ".")) || 0;
-      if (n !== Number(investment.balance)) setBalance(String(investment.balance ?? 0));
-    }
-    if (!pctFocused.current) {
-      const n = parseFloat(pct.replace(",", ".")) || 0;
-      if (n !== Number(investment.monthly_return_pct)) setPct(String(investment.monthly_return_pct ?? 0));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [investment.id, investment.category, investment.balance, investment.monthly_return_pct]);
-
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const debounce = (fn: () => void) => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(fn, 1000);
-  };
-
-  return (
-    <div className="neu-raised rounded-2xl p-4">
-      <div className="flex items-center gap-2">
-        <input
-          value={category}
-          onFocus={() => { catFocused.current = true; }}
-          onBlur={() => { catFocused.current = false; }}
-          onChange={(e) => {
-            setCategory(e.target.value);
-            const v = e.target.value;
-            debounce(() => onPatch({ category: v }));
-          }}
-          placeholder="Renda Fixa, Ações…"
-          className="neu-inset min-h-[44px] w-full min-w-0 rounded-xl bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
-        />
-        <button
-          onClick={onDelete}
-          className="neu-pressable inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-danger"
-          aria-label="Remover investimento"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <label className="block">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Saldo (R$)</span>
-          <input
-            type="text"
-            inputMode="decimal"
-            pattern="[0-9.,]*"
-            value={balance}
-            onFocus={() => { balFocused.current = true; }}
-            onBlur={() => { balFocused.current = false; }}
-            onChange={(e) => {
-              const raw = e.target.value;
-              setBalance(raw);
-              const n = parseFloat(raw.replace(",", "."));
-              if (!Number.isNaN(n)) debounce(() => onPatch({ balance: n }));
-            }}
-            className="neu-inset mt-1 min-h-[44px] w-full rounded-xl bg-transparent px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-2 focus:ring-primary/30"
-          />
-        </label>
-        <label className="block">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Rentab. (%)</span>
-          <input
-            type="text"
-            inputMode="decimal"
-            pattern="[0-9.,]*"
-            value={pct}
-            onFocus={() => { pctFocused.current = true; }}
-            onBlur={() => { pctFocused.current = false; }}
-            onChange={(e) => {
-              const raw = e.target.value;
-              setPct(raw);
-              const n = parseFloat(raw.replace(",", "."));
-              if (!Number.isNaN(n)) debounce(() => onPatch({ monthly_return_pct: n }));
-            }}
-            className="neu-inset mt-1 min-h-[44px] w-full rounded-xl bg-transparent px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-2 focus:ring-primary/30"
-          />
-        </label>
-      </div>
-    </div>
-  );
-}
