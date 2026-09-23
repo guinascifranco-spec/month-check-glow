@@ -47,6 +47,7 @@ type Installment = {
   first_date: string;
   installment_value: number;
   total_installments: number;
+  kind: "parcelamento" | "assinatura";
 };
 
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -72,6 +73,12 @@ function computeStatus(it: Installment) {
   const start = parseDate(it.first_date);
   const today = new Date();
   const total = it.total_installments;
+  // Assinaturas: sempre ativas, sem fim definido
+  if (it.kind === "assinatura") {
+    const elapsed = monthsBetween(start, today);
+    const paid = Math.max(0, elapsed + 1);
+    return { start, endDate: null as Date | null, paid, remaining: Infinity, isActive: true, totalPaid: Number(it.installment_value) * paid, total: Infinity };
+  }
   const elapsed = monthsBetween(start, today);
   const paid = Math.max(0, Math.min(total, elapsed + 1));
   const remaining = Math.max(0, total - paid);
@@ -138,11 +145,19 @@ function ParcelasPage() {
     () => installments.map((i) => ({ ...i, status: computeStatus(i) })),
     [installments],
   );
+  // Assinaturas: sempre ativas
   const active = useMemo(
     () =>
       annotated
         .filter((i) => i.status.isActive)
-        .sort((a, b) => a.status.endDate.getTime() - b.status.endDate.getTime()),
+        .sort((a, b) => {
+          // assinaturas ficam no final
+          if (a.kind === "assinatura" && b.kind !== "assinatura") return 1;
+          if (a.kind !== "assinatura" && b.kind === "assinatura") return -1;
+          if (!a.status.endDate) return 1;
+          if (!b.status.endDate) return -1;
+          return a.status.endDate.getTime() - b.status.endDate.getTime();
+        }),
     [annotated],
   );
   const history = useMemo(
@@ -274,34 +289,44 @@ function ParcelasPage() {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Parcelas ativas
+                Parcelas &amp; Assinaturas ativas
               </div>
               <div className="mt-1 text-sm text-muted-foreground">
-                Ordenadas pelas que terminam primeiro.
+                Parcelados ordenados pelos que terminam primeiro; assinaturas ao final.
               </div>
             </div>
             <button
               onClick={() => setOpen(true)}
               className="neu-pressable inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-primary"
             >
-              <Plus className="h-4 w-4" /> Nova Compra
+              <Plus className="h-4 w-4" /> Nova
             </button>
           </div>
 
           {active.length === 0 ? (
             <div className="neu-inset rounded-xl px-4 py-8 text-center text-sm text-muted-foreground">
-              Nenhuma compra parcelada ativa. Clique em "Nova Compra" para começar.
+              Nenhuma parcela ou assinatura ativa. Clique em "Nova" para começar.
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {active.map((it) => {
                 const s = it.status;
-                const progressPct = (s.paid / s.total) * 100;
+                const isAssinatura = it.kind === "assinatura";
+                const progressPct = isAssinatura ? 100 : (s.paid / (s.total as number)) * 100;
                 return (
                   <div key={it.id} className="neu-inset rounded-xl p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-base font-semibold">{it.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-base font-semibold">{it.name}</span>
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                            isAssinatura
+                              ? "bg-secondary/20 text-secondary"
+                              : "bg-primary/10 text-primary"
+                          }`}>
+                            {isAssinatura ? "Assinatura" : "Parcelado"}
+                          </span>
+                        </div>
                         <div className="text-sm text-muted-foreground">
                           {brl.format(Number(it.installment_value))} / mês
                         </div>
@@ -315,17 +340,25 @@ function ParcelasPage() {
                       </button>
                     </div>
                     <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                      <span className="font-semibold text-foreground">
-                        {s.paid}/{s.total} parcelas
-                      </span>
-                      <span>Termina em {monthLabel(s.endDate)}</span>
+                      {isAssinatura ? (
+                        <span className="font-semibold text-foreground">Recorrente</span>
+                      ) : (
+                        <span className="font-semibold text-foreground">
+                          {s.paid}/{s.total as number} parcelas
+                        </span>
+                      )}
+                      {!isAssinatura && s.endDate && (
+                        <span>Termina em {monthLabel(s.endDate)}</span>
+                      )}
                     </div>
-                    <div className="neu-inset mt-2 h-1.5 w-full overflow-hidden rounded-full">
-                      <div
-                        className="h-full bg-primary transition-all"
-                        style={{ width: `${progressPct}%` }}
-                      />
-                    </div>
+                    {!isAssinatura && (
+                      <div className="neu-inset mt-2 h-1.5 w-full overflow-hidden rounded-full">
+                        <div
+                          className="h-full bg-primary transition-all"
+                          style={{ width: `${progressPct}%` }}
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -429,11 +462,13 @@ function NewPurchaseDialog({
     first_date: string;
     installment_value: number;
     total_installments: number;
+    kind: "parcelamento" | "assinatura";
   }) => Promise<void>;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const [name, setName] = useState("");
   const [firstDate, setFirstDate] = useState(today);
+  const [kind, setKind] = useState<"parcelamento" | "assinatura">("parcelamento");
   const [count, setCount] = useState<number>(12);
   const [mode, setMode] = useState<"total" | "monthly">("total");
   const [amount, setAmount] = useState<string>("");
@@ -443,21 +478,25 @@ function NewPurchaseDialog({
     if (open) {
       setName("");
       setFirstDate(today);
+      setKind("parcelamento");
       setCount(12);
       setMode("total");
       setAmount("");
     }
   }, [open]);
 
+  const isAssinatura = kind === "assinatura";
   const numAmount = Number(amount.replace(",", ".")) || 0;
   const total = mode === "total" ? numAmount : numAmount * count;
-  const monthly = mode === "monthly" ? numAmount : count > 0 ? numAmount / count : 0;
+  const monthly = isAssinatura
+    ? numAmount  // assinatura: sempre é o valor mensal direto
+    : mode === "monthly" ? numAmount : count > 0 ? numAmount / count : 0;
 
   const wouldExceed = limit > 0 && totalCommitted + monthly > limit;
   const overflow = totalCommitted + monthly - limit;
   const available = Math.max(0, limit - totalCommitted);
 
-  const canSubmit = name.trim().length > 0 && firstDate && count >= 1 && monthly > 0 && !submitting;
+  const canSubmit = name.trim().length > 0 && firstDate && (isAssinatura || count >= 1) && monthly > 0 && !submitting;
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -467,7 +506,8 @@ function NewPurchaseDialog({
         name: name.trim(),
         first_date: firstDate,
         installment_value: Number(monthly.toFixed(2)),
-        total_installments: count,
+        total_installments: isAssinatura ? 9999 : count,
+        kind,
       });
     } finally {
       setSubmitting(false);
@@ -478,12 +518,39 @@ function NewPurchaseDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Nova compra parcelada</DialogTitle>
+          <DialogTitle>
+            {kind === "assinatura" ? "Nova assinatura recorrente" : "Nova compra parcelada"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Tipo: parcelamento ou assinatura */}
           <div>
-            <Label>Nome da compra</Label>
+            <label className="mb-2 block text-sm font-medium">Tipo</label>
+            <div className="neu-inset inline-flex rounded-full p-1">
+              <button
+                type="button"
+                onClick={() => { setKind("parcelamento"); if (kind === "assinatura") setMode("total"); }}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+                  kind === "parcelamento" ? "neu-raised-sm text-primary" : "text-muted-foreground"
+                }`}
+              >
+                Parcelado
+              </button>
+              <button
+                type="button"
+                onClick={() => { setKind("assinatura"); setMode("monthly"); }}
+                className={`rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+                  kind === "assinatura" ? "neu-raised-sm text-secondary" : "text-muted-foreground"
+                }`}
+              >
+                Assinatura
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <Label>Nome {isAssinatura ? "da assinatura" : "da compra"}</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -494,7 +561,7 @@ function NewPurchaseDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Data da 1ª parcela</Label>
+              <Label>Data da 1ª {isAssinatura ? "cobrança" : "parcela"}</Label>
               <Input
                 type="date"
                 value={firstDate}
@@ -502,39 +569,43 @@ function NewPurchaseDialog({
                 className="mt-1"
               />
             </div>
+            {!isAssinatura && (
+              <div>
+                <Label>Nº de parcelas</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={360}
+                  value={count}
+                  onChange={(e) => setCount(Math.max(1, Number(e.target.value) || 1))}
+                  className="mt-1"
+                />
+              </div>
+            )}
+          </div>
+
+          {!isAssinatura && (
             <div>
-              <Label>Nº de parcelas</Label>
-              <Input
-                type="number"
-                min={1}
-                max={360}
-                value={count}
-                onChange={(e) => setCount(Math.max(1, Number(e.target.value) || 1))}
-                className="mt-1"
-              />
+              <Label>Modo de registro</Label>
+              <RadioGroup
+                value={mode}
+                onValueChange={(v) => setMode(v as "total" | "monthly")}
+                className="mt-2 grid grid-cols-2 gap-2"
+              >
+                <label className="neu-inset flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm">
+                  <RadioGroupItem value="total" id="m-total" />
+                  <span>Valor total</span>
+                </label>
+                <label className="neu-inset flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm">
+                  <RadioGroupItem value="monthly" id="m-monthly" />
+                  <span>Valor mensal</span>
+                </label>
+              </RadioGroup>
             </div>
-          </div>
+          )}
 
           <div>
-            <Label>Modo de registro</Label>
-            <RadioGroup
-              value={mode}
-              onValueChange={(v) => setMode(v as "total" | "monthly")}
-              className="mt-2 grid grid-cols-2 gap-2"
-            >
-              <label className="neu-inset flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm">
-                <RadioGroupItem value="total" id="m-total" />
-                <span>Valor total</span>
-              </label>
-              <label className="neu-inset flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm">
-                <RadioGroupItem value="monthly" id="m-monthly" />
-                <span>Valor mensal</span>
-              </label>
-            </RadioGroup>
-          </div>
-
-          <div>
-            <Label>{mode === "total" ? "Valor total (R$)" : "Valor da parcela (R$)"}</Label>
+            <Label>{isAssinatura ? "Valor mensal (R$)" : mode === "total" ? "Valor total (R$)" : "Valor da parcela (R$)"}</Label>
             <Input
               type="text"
               inputMode="decimal"
@@ -549,17 +620,24 @@ function NewPurchaseDialog({
           {/* Preview */}
           <div className="neu-inset rounded-xl p-3 text-sm">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Valor total</span>
-              <span className="font-semibold">{brl.format(total)}</span>
-            </div>
-            <div className="mt-1 flex items-center justify-between">
               <span className="text-muted-foreground">Valor mensal</span>
               <span className="font-semibold">{brl.format(monthly)}</span>
             </div>
-            <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-              <span>{count}x</span>
-              <span>{count > 0 ? brl.format(monthly) : "—"} / mês</span>
-            </div>
+            {!isAssinatura && (
+              <>
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-muted-foreground">Valor total</span>
+                  <span className="font-semibold">{brl.format(total)}</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{count}x</span>
+                  <span>{count > 0 ? brl.format(monthly) : "—"} / mês</span>
+                </div>
+              </>
+            )}
+            {isAssinatura && (
+              <div className="mt-1 text-xs text-muted-foreground">Recorrente sem data de término</div>
+            )}
           </div>
 
           {wouldExceed && (

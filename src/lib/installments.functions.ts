@@ -52,12 +52,14 @@ export const addInstallment = createServerFn({ method: "POST" })
     first_date: string;
     installment_value: number;
     total_installments: number;
+    kind?: string;
   }) =>
     z.object({
       name: z.string().min(1).max(120),
       first_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       installment_value: z.number().min(0),
       total_installments: z.number().int().min(1).max(360),
+      kind: z.enum(["parcelamento", "assinatura"]).optional().default("parcelamento"),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -70,6 +72,7 @@ export const addInstallment = createServerFn({ method: "POST" })
         first_date: data.first_date,
         installment_value: data.installment_value,
         total_installments: data.total_installments,
+        kind: data.kind ?? "parcelamento",
         position: 0,
       })
       .select("*")
