@@ -12,3 +12,9 @@
 - [x] Criar cadastro e filtros unificados com a Conferência
 - [x] Criar gráficos de distribuição por categoria e mês
 - [x] Validar sincronização e responsividade
+
+# Recuperação do backup
+
+- [x] Conferir o backup contra os registros existentes e preservar os dados originais
+- [x] Recuperar os 133 itens nos meses correspondentes da Conferência sem duplicações
+- [x] Validar totais e navegação autenticada em abril, setembro e outubro
