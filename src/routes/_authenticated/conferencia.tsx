@@ -17,6 +17,7 @@ import {
   reorderChecklistItems,
   copyFromPreviousMonth,
   seedTemplate,
+  getChecklistCategories,
 } from "@/lib/checklist.functions";
 
 export const Route = createFileRoute("/_authenticated/conferencia")({
@@ -37,7 +38,10 @@ type Row = {
   position: number;
   quitado: boolean;
   expense_class: "fixo" | "variavel";
+  category_id: string | null;
 };
+
+type Category = { id: string; name: string; color_key: string };
 
 const MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -54,6 +58,7 @@ function ConferenciaPage() {
   const [month, setMonth] = useState(now.getMonth() + 1);
 
   const fetchRows = useServerFn(getChecklistMonth);
+  const fetchCategories = useServerFn(getChecklistCategories);
   const addRowFn = useServerFn(addChecklistItem);
   const updateRowFn = useServerFn(updateChecklistItem);
   const deleteRowFn = useServerFn(deleteChecklistItem);
@@ -62,10 +67,17 @@ function ConferenciaPage() {
   const seedTemplateFn = useServerFn(seedTemplate);
 
   const queryKey = ["checklist-rows", year, month] as const;
+  const categoriesKey = ["checklist-categories"] as const;
   
   const { data = { items: [], isNew: false }, isLoading } = useQuery({
     queryKey,
     queryFn: () => fetchRows({ data: { year, month } }) as Promise<{ items: Row[]; isNew: boolean }>,
+  });
+
+  const { data: categories = [] } = useQuery({
+    queryKey: categoriesKey,
+    queryFn: () => fetchCategories({}) as Promise<Category[]>,
+    staleTime: 5 * 60 * 1000,
   });
   
   const rows = data.items;
@@ -108,7 +120,7 @@ function ConferenciaPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (patch: { id: string; descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean; expense_class?: "fixo" | "variavel" }) =>
+    mutationFn: (patch: { id: string; descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean; expense_class?: "fixo" | "variavel"; category_id?: string | null }) =>
       updateRowFn({ data: patch }),
     onMutate: async (patch) => {
       await queryClient.cancelQueries({ queryKey });
@@ -271,6 +283,7 @@ function ConferenciaPage() {
             <RowCard
               key={row.id}
               row={row}
+              categories={categories}
               isDragging={dragId === row.id}
               onDragStart={() => setDragId(row.id)}
               onDragEnd={() => setDragId(null)}
@@ -289,7 +302,7 @@ function ConferenciaPage() {
                 <tr className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   <th className="w-8 px-2 py-4"></th>
                   <th className="px-4 py-4">Descrição</th>
-                  <th className="px-4 py-4">Tipo</th>
+                  <th className="px-4 py-4">Classe</th>
                   <th className="px-4 py-4">Categoria</th>
                   <th className="px-4 py-4 text-right">Entrada (R$)</th>
                   <th className="px-4 py-4 text-right">Saída (R$)</th>
@@ -306,9 +319,10 @@ function ConferenciaPage() {
                 )}
                 {rows.map((row) => (
                   <RowItem
-                    key={row.id}
-                    row={row}
-                    isDragging={dragId === row.id}
+                     key={row.id}
+                     row={row}
+                     categories={categories}
+                     isDragging={dragId === row.id}
                     onDragStart={() => setDragId(row.id)}
                     onDragEnd={() => setDragId(null)}
                     onDropRow={() => handleDrop(row.id)}
@@ -342,12 +356,13 @@ function ConferenciaPage() {
   );
 }
 
-type RowPatch = { descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean; expense_class?: "fixo" | "variavel" };
+type RowPatch = { descricao?: string; tipo?: "entrada" | "saida"; valor?: number; quitado?: boolean; expense_class?: "fixo" | "variavel"; category_id?: string | null };
 
 function RowCard({
-  row, onUpdate, onDelete, isDragging, onDragStart, onDragEnd, onDropRow,
+  row, categories, onUpdate, onDelete, isDragging, onDragStart, onDragEnd, onDropRow,
 }: {
   row: Row;
+  categories: Category[];
   onUpdate: (patch: RowPatch) => void;
   onDelete: () => void;
   isDragging: boolean;
@@ -450,17 +465,32 @@ function RowCard({
       </div>
 
       {!isEntrada && (
-        <div className="mt-3 grid grid-cols-2 gap-2" aria-label="Categoria do gasto">
-          {(["fixo", "variavel"] as const).map((category) => (
-            <button
-              key={category}
-              type="button"
-              onClick={() => onUpdate({ expense_class: category })}
-              className={`min-h-[44px] rounded-xl text-xs font-semibold ${row.expense_class === category ? "neu-inset text-secondary" : "neu-pressable text-muted-foreground"}`}
+        <div className="mt-3 space-y-2" aria-label="Classificação do gasto">
+          <div className="grid grid-cols-2 gap-2">
+            {(["fixo", "variavel"] as const).map((cls) => (
+              <button
+                key={cls}
+                type="button"
+                onClick={() => onUpdate({ expense_class: cls })}
+                className={`min-h-[44px] rounded-xl text-xs font-semibold ${row.expense_class === cls ? "neu-inset text-secondary" : "neu-pressable text-muted-foreground"}`}
+              >
+                {cls === "fixo" ? "Fixo" : "Variável"}
+              </button>
+            ))}
+          </div>
+          {categories.length > 0 && (
+            <select
+              value={row.category_id ?? ""}
+              onChange={(e) => onUpdate({ category_id: e.target.value || null })}
+              aria-label="Categoria de despesa"
+              className="neu-inset min-h-[44px] w-full rounded-lg bg-transparent px-3 text-xs outline-none focus:ring-2 focus:ring-secondary/40"
             >
-              {category === "fixo" ? "Fixo" : "Variável"}
-            </button>
-          ))}
+              <option value="">Sem categoria</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+          )}
         </div>
       )}
 
@@ -500,9 +530,10 @@ function SummaryCard({
 }
 
 function RowItem({
-  row, onUpdate, onDelete, isDragging, onDragStart, onDragEnd, onDropRow,
+  row, categories, onUpdate, onDelete, isDragging, onDragStart, onDragEnd, onDropRow,
 }: {
   row: Row;
+  categories: Category[];
   onUpdate: (patch: RowPatch) => void;
   onDelete: () => void;
   isDragging: boolean;
@@ -586,12 +617,31 @@ function RowItem({
           <select
             value={row.expense_class}
             onChange={(event) => onUpdate({ expense_class: event.target.value as "fixo" | "variavel" })}
-            aria-label={`Categoria de ${row.descricao || "saída"}`}
+            aria-label={`Classe de ${row.descricao || "saída"}`}
             className="neu-inset min-h-[44px] rounded-lg bg-transparent px-3 text-xs font-semibold outline-none focus:ring-2 focus:ring-secondary/40"
           >
             <option value="fixo">Fixo</option>
             <option value="variavel">Variável</option>
           </select>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        {isEntrada ? (
+          <span className="text-xs text-muted-foreground">—</span>
+        ) : categories.length > 0 ? (
+          <select
+            value={row.category_id ?? ""}
+            onChange={(e) => onUpdate({ category_id: e.target.value || null })}
+            aria-label={`Categoria de ${row.descricao || "saída"}`}
+            className="neu-inset min-h-[44px] rounded-lg bg-transparent px-3 text-xs outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <option value="">Sem categoria</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
+            ))}
+          </select>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
         )}
       </td>
       <td className="px-4 py-3">
