@@ -239,6 +239,7 @@ export type Database = {
           first_date: string
           id: string
           installment_value: number
+          kind: string
           name: string
           position: number
           total_installments: number
@@ -250,6 +251,7 @@ export type Database = {
           first_date: string
           id?: string
           installment_value?: number
+          kind?: string
           name?: string
           position?: number
           total_installments?: number
@@ -261,6 +263,7 @@ export type Database = {
           first_date?: string
           id?: string
           installment_value?: number
+          kind?: string
           name?: string
           position?: number
           total_installments?: number
