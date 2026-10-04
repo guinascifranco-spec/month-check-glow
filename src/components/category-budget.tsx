@@ -53,7 +53,7 @@ function BudgetRow({ category, spent, onSave }: {
   </div>;
 }
 
-export function CategoryBudget({ categories, year, month, onPeriodChange, spending, loading, onSave }: {
+export function CategoryBudget({ categories, year, month, onPeriodChange, spending, uncategorized, loading, onSave }: {
   categories: Category[]; year: number; month: number; onPeriodChange: (year: number, month: number) => void;
   spending: Record<string, number>; uncategorized: number; loading: boolean;
   onSave: (id: string, amount: number | null) => Promise<void>;
@@ -72,6 +72,7 @@ export function CategoryBudget({ categories, year, month, onPeriodChange, spendi
       {categories.length === 0 ? <p className="py-5 text-sm text-muted-foreground">Nenhuma categoria cadastrada.</p> :
         categories.map((category) => <BudgetRow key={category.id} category={category} spent={spending[category.id] ?? 0} onSave={onSave} />)}
     </div>
+    {uncategorized > 0 && <p className="mt-3 text-sm text-muted-foreground">{brl.format(uncategorized)} em saídas sem categoria neste mês. Classifique os lançamentos para incluí-los no comparativo.</p>}
     {loading && <p className="py-2 text-sm text-muted-foreground">Atualizando valores...</p>}
   </section>;
 }
