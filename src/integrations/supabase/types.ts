@@ -70,6 +70,8 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          rentabilidade_mensal_pct: number
+          saldo_atual: number
           tipo: Database["public"]["Enums"]["asset_type"]
           updated_at: string
           user_id: string
@@ -79,6 +81,8 @@ export type Database = {
           created_at?: string
           id?: string
           nome: string
+          rentabilidade_mensal_pct?: number
+          saldo_atual?: number
           tipo: Database["public"]["Enums"]["asset_type"]
           updated_at?: string
           user_id: string
@@ -88,6 +92,8 @@ export type Database = {
           created_at?: string
           id?: string
           nome?: string
+          rentabilidade_mensal_pct?: number
+          saldo_atual?: number
           tipo?: Database["public"]["Enums"]["asset_type"]
           updated_at?: string
           user_id?: string
