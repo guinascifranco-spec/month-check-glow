@@ -140,7 +140,10 @@ function ParcelasPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: listKey }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: listKey });
+      queryClient.invalidateQueries({ queryKey: ["future-projection"] });
+    },
   });
 
   // Split active / history
@@ -337,13 +340,10 @@ function ParcelasPage() {
                           {brl.format(Number(it.installment_value))} / mês
                         </div>
                       </div>
-                      <button
-                        onClick={() => deleteMutation.mutate(it.id)}
-                        className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-danger"
-                        aria-label="Excluir"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="flex shrink-0 items-center">
+                        <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => openEdit(it)} aria-label={`Editar ${it.name}`} title="Editar"><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground hover:text-danger" onClick={() => deleteMutation.mutate(it.id)} aria-label={`Excluir ${it.name}`} title="Excluir"><Trash2 className="h-4 w-4" /></Button>
+                      </div>
                     </div>
                     <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
                       {isAssinatura ? (
@@ -397,13 +397,10 @@ function ParcelasPage() {
                           Total pago: {brl.format(s.totalPaid)}
                         </div>
                       </div>
-                      <button
-                        onClick={() => deleteMutation.mutate(it.id)}
-                        className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-danger"
-                        aria-label="Excluir"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="flex shrink-0 items-center">
+                        <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => openEdit(it)} aria-label={`Editar ${it.name}`} title="Editar"><Pencil className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground hover:text-danger" onClick={() => deleteMutation.mutate(it.id)} aria-label={`Excluir ${it.name}`} title="Excluir"><Trash2 className="h-4 w-4" /></Button>
+                      </div>
                     </div>
                     <div className="mt-3 text-xs text-muted-foreground">
                       {monthLabel(s.start)} → {s.endDate ? monthLabel(s.endDate) : "Sem término"} · quitada em {s.endDate ? monthLabel(s.endDate) : "—"}
@@ -418,13 +415,17 @@ function ParcelasPage() {
 
       <NewPurchaseDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => { setOpen(next); if (!next) setEditing(null); }}
+        editing={editing}
         totalCommitted={totalCommitted}
         limit={limit}
-        onCreate={async (payload) => {
-          await addFn({ data: payload });
+        onSave={async (payload) => {
+          if (editing) await updateFn({ data: { id: editing.id, ...payload } });
+          else await addFn({ data: payload });
           await queryClient.invalidateQueries({ queryKey: listKey });
+          await queryClient.invalidateQueries({ queryKey: ["future-projection"] });
           setOpen(false);
+          setEditing(null);
         }}
       />
       <MobileNav />
@@ -529,7 +530,7 @@ function NewPurchaseDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {kind === "assinatura" ? "Nova assinatura recorrente" : "Nova compra parcelada"}
+            {editing ? "Editar lançamento" : kind === "assinatura" ? "Nova assinatura recorrente" : "Nova compra parcelada"}
           </DialogTitle>
         </DialogHeader>
 
@@ -664,19 +665,12 @@ function NewPurchaseDialog({
         </div>
 
         <DialogFooter>
-          <button
-            onClick={() => onOpenChange(false)}
-            className="neu-pressable rounded-xl px-4 py-2 text-sm text-muted-foreground"
-          >
+           <Button variant="outline" onClick={() => onOpenChange(false)} className="min-h-11">
             Cancelar
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!canSubmit}
-            className="neu-pressable rounded-xl px-4 py-2 text-sm font-semibold text-primary disabled:opacity-50"
-          >
-            {submitting ? "Salvando..." : "Salvar compra"}
-          </button>
+           </Button>
+           <Button onClick={handleSubmit} disabled={!canSubmit} className="min-h-11">
+             {submitting ? "Salvando..." : editing ? "Salvar alterações" : "Salvar compra"}
+           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
