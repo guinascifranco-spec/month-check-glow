@@ -70,6 +70,8 @@ export type Database = {
           created_at: string
           id: string
           nome: string
+          rentabilidade_mensal_pct: number
+          saldo_atual: number
           tipo: Database["public"]["Enums"]["asset_type"]
           updated_at: string
           user_id: string
@@ -79,6 +81,8 @@ export type Database = {
           created_at?: string
           id?: string
           nome: string
+          rentabilidade_mensal_pct?: number
+          saldo_atual?: number
           tipo: Database["public"]["Enums"]["asset_type"]
           updated_at?: string
           user_id: string
@@ -88,6 +92,8 @@ export type Database = {
           created_at?: string
           id?: string
           nome?: string
+          rentabilidade_mensal_pct?: number
+          saldo_atual?: number
           tipo?: Database["public"]["Enums"]["asset_type"]
           updated_at?: string
           user_id?: string
@@ -128,6 +134,7 @@ export type Database = {
       }
       checklist_items: {
         Row: {
+          category_id: string | null
           created_at: string
           descricao: string
           expense_class: string
@@ -135,6 +142,7 @@ export type Database = {
           month: number
           position: number
           quitado: boolean
+          source_month_check_row_id: string | null
           tipo: string
           updated_at: string
           user_id: string
@@ -142,6 +150,7 @@ export type Database = {
           year: number
         }
         Insert: {
+          category_id?: string | null
           created_at?: string
           descricao?: string
           expense_class?: string
@@ -149,6 +158,7 @@ export type Database = {
           month: number
           position?: number
           quitado?: boolean
+          source_month_check_row_id?: string | null
           tipo: string
           updated_at?: string
           user_id: string
@@ -156,6 +166,7 @@ export type Database = {
           year: number
         }
         Update: {
+          category_id?: string | null
           created_at?: string
           descricao?: string
           expense_class?: string
@@ -163,13 +174,22 @@ export type Database = {
           month?: number
           position?: number
           quitado?: boolean
+          source_month_check_row_id?: string | null
           tipo?: string
           updated_at?: string
           user_id?: string
           valor?: number
           year?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       expense_categories: {
         Row: {
@@ -225,6 +245,7 @@ export type Database = {
           first_date: string
           id: string
           installment_value: number
+          kind: string
           name: string
           position: number
           total_installments: number
@@ -236,6 +257,7 @@ export type Database = {
           first_date: string
           id?: string
           installment_value?: number
+          kind?: string
           name?: string
           position?: number
           total_installments?: number
@@ -247,6 +269,7 @@ export type Database = {
           first_date?: string
           id?: string
           installment_value?: number
+          kind?: string
           name?: string
           position?: number
           total_installments?: number
