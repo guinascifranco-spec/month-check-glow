@@ -80,11 +80,12 @@ export const getMonthlyCategorySpending = createServerFn({ method: "POST" })
       .eq("user_id", context.userId).eq("year", data.year).eq("month", data.month).eq("tipo", "saida");
     if (error) throw new Error(error.message);
     const amounts: Record<string, number> = {};
+    let uncategorized = 0;
     for (const row of rows ?? []) {
-      if (!row.category_id) continue;
+      if (!row.category_id) { uncategorized += Number(row.valor || 0); continue; }
       amounts[row.category_id] = (amounts[row.category_id] ?? 0) + Number(row.valor || 0);
     }
-    return amounts;
+    return { amounts, uncategorized };
   });
 
 export const updateCategoryBudget = createServerFn({ method: "POST" })

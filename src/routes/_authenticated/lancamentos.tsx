@@ -111,7 +111,7 @@ function TransactionsPage() {
     queryKey: key,
     queryFn: () => fetchWorkspace({ data: { from, to } }) as Promise<{ categories: Category[]; rules: Rule[]; rows: Transaction[] }>,
   });
-  const { data: spending = {}, isFetching: spendingLoading } = useQuery({
+  const { data: spending, isFetching: spendingLoading } = useQuery({
     queryKey: ["monthly-category-spending", budgetPeriod.year, budgetPeriod.month],
     queryFn: () => fetchMonthlySpending({ data: budgetPeriod }),
   });
@@ -248,7 +248,7 @@ function TransactionsPage() {
 
         <CategoryBudget categories={categories} year={budgetPeriod.year} month={budgetPeriod.month}
           onPeriodChange={(year, month) => setBudgetPeriod({ year, month })}
-          spending={spending} loading={spendingLoading}
+          spending={spending?.amounts ?? {}} uncategorized={spending?.uncategorized ?? 0} loading={spendingLoading}
           onSave={async (id, monthlyBudget) => {
             await saveBudget({ data: { id, monthlyBudget } });
             await queryClient.invalidateQueries({ queryKey: ["transactions"] });

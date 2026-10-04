@@ -55,7 +55,7 @@ function BudgetRow({ category, spent, onSave }: {
 
 export function CategoryBudget({ categories, year, month, onPeriodChange, spending, loading, onSave }: {
   categories: Category[]; year: number; month: number; onPeriodChange: (year: number, month: number) => void;
-  spending: Record<string, number>; loading: boolean;
+  spending: Record<string, number>; uncategorized: number; loading: boolean;
   onSave: (id: string, amount: number | null) => Promise<void>;
 }) {
   const shift = (offset: number) => { const date = new Date(year, month - 1 + offset, 1); onPeriodChange(date.getFullYear(), date.getMonth() + 1); };
