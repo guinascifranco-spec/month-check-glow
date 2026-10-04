@@ -69,6 +69,37 @@ export const getTransactionWorkspace = createServerFn({ method: "POST" })
     return { categories: categories ?? [], rules: rules ?? [], rows: filtered };
   });
 
+export const getMonthlyCategorySpending = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { year: number; month: number }) => z.object({
+    year: z.number().int().min(1970).max(3000), month: z.number().int().min(1).max(12),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase.from("month_check_rows")
+      .select("category_id, valor")
+      .eq("user_id", context.userId).eq("year", data.year).eq("month", data.month).eq("tipo", "saida");
+    if (error) throw new Error(error.message);
+    const amounts: Record<string, number> = {};
+    for (const row of rows ?? []) {
+      if (!row.category_id) continue;
+      amounts[row.category_id] = (amounts[row.category_id] ?? 0) + Number(row.valor || 0);
+    }
+    return amounts;
+  });
+
+export const updateCategoryBudget = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string; monthlyBudget: number | null }) => z.object({
+    id: idSchema, monthlyBudget: z.number().finite().min(0).max(999999999999).nullable(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase.from("expense_categories")
+      .update({ monthly_budget: data.monthlyBudget }).eq("id", data.id).eq("user_id", context.userId)
+      .select("id").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
 export const createTransaction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { date: string; description: string; type: "entrada" | "saida"; value: number; categoryId?: string | null; expenseClass: "fixo" | "variavel"; settled: boolean }) =>
