@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { LogOut, Plus, Trash2, AlertTriangle, History } from "lucide-react";
+import { LogOut, Plus, Trash2, AlertTriangle, History, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 import { InstallPWAButton } from "@/components/install-pwa-button";
@@ -17,10 +17,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   addInstallment,
+  updateInstallment,
   deleteInstallment,
   getSettings,
   listInstallments,
@@ -96,6 +98,7 @@ function ParcelasPage() {
   const saveLimit = useServerFn(upsertLimit);
   const fetchList = useServerFn(listInstallments);
   const addFn = useServerFn(addInstallment);
+  const updateFn = useServerFn(updateInstallment);
   const deleteFn = useServerFn(deleteInstallment);
 
   const settingsKey = ["installment-settings"] as const;
@@ -193,6 +196,9 @@ function ParcelasPage() {
 
   // New purchase modal
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Installment | null>(null);
+  const openNew = () => { setEditing(null); setOpen(true); };
+  const openEdit = (item: Installment) => { setEditing(item); setOpen(true); };
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -296,7 +302,7 @@ function ParcelasPage() {
               </div>
             </div>
             <button
-              onClick={() => setOpen(true)}
+              onClick={openNew}
               className="neu-pressable inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-primary"
             >
               <Plus className="h-4 w-4" /> Nova
@@ -333,7 +339,7 @@ function ParcelasPage() {
                       </div>
                       <button
                         onClick={() => deleteMutation.mutate(it.id)}
-                        className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-red-500"
+                        className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-danger"
                         aria-label="Excluir"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -393,7 +399,7 @@ function ParcelasPage() {
                       </div>
                       <button
                         onClick={() => deleteMutation.mutate(it.id)}
-                        className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:text-red-500"
+                        className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-danger"
                         aria-label="Excluir"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -449,15 +455,17 @@ function SummaryCard({
 function NewPurchaseDialog({
   open,
   onOpenChange,
+  editing,
   totalCommitted,
   limit,
-  onCreate,
+  onSave,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  editing: Installment | null;
   totalCommitted: number;
   limit: number;
-  onCreate: (p: {
+  onSave: (p: {
     name: string;
     first_date: string;
     installment_value: number;
@@ -476,14 +484,14 @@ function NewPurchaseDialog({
 
   useEffect(() => {
     if (open) {
-      setName("");
-      setFirstDate(today);
-      setKind("parcelamento");
-      setCount(12);
-      setMode("total");
-      setAmount("");
+      setName(editing?.name ?? "");
+      setFirstDate(editing?.first_date ?? today);
+      setKind(editing?.kind ?? "parcelamento");
+      setCount(editing?.kind === "assinatura" ? 12 : (editing?.total_installments ?? 12));
+      setMode(editing ? "monthly" : "total");
+      setAmount(editing ? String(editing.installment_value) : "");
     }
-  }, [open]);
+  }, [open, editing]);
 
   const isAssinatura = kind === "assinatura";
   const numAmount = Number(amount.replace(",", ".")) || 0;
@@ -492,9 +500,11 @@ function NewPurchaseDialog({
     ? numAmount  // assinatura: sempre é o valor mensal direto
     : mode === "monthly" ? numAmount : count > 0 ? numAmount / count : 0;
 
-  const wouldExceed = limit > 0 && totalCommitted + monthly > limit;
-  const overflow = totalCommitted + monthly - limit;
-  const available = Math.max(0, limit - totalCommitted);
+  const previousMonthly = editing && computeStatus(editing).isActive ? Number(editing.installment_value) : 0;
+  const committedAfterSave = totalCommitted - previousMonthly + monthly;
+  const wouldExceed = limit > 0 && committedAfterSave > limit;
+  const overflow = committedAfterSave - limit;
+  const available = Math.max(0, limit - (totalCommitted - previousMonthly));
 
   const canSubmit = name.trim().length > 0 && firstDate && (isAssinatura || count >= 1) && monthly > 0 && !submitting;
 
@@ -502,11 +512,11 @@ function NewPurchaseDialog({
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      await onCreate({
+      await onSave({
         name: name.trim(),
         first_date: firstDate,
         installment_value: Number(monthly.toFixed(2)),
-        total_installments: isAssinatura ? 9999 : count,
+        total_installments: isAssinatura ? 1 : count,
         kind,
       });
     } finally {
