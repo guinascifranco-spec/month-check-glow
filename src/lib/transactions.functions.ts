@@ -27,14 +27,14 @@ export const getTransactionWorkspace = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     let { data: categories, error: categoryError } = await supabase
       .from("expense_categories")
-      .select("id, name, color_key")
+      .select("id, name, color_key, monthly_budget")
       .eq("user_id", userId)
       .order("name");
     if (categoryError) throw new Error(categoryError.message);
 
     if (!categories?.length) {
       const seeded = DEFAULT_CATEGORIES.map(([name, color_key]) => ({ user_id: userId, name, color_key }));
-      const result = await supabase.from("expense_categories").insert(seeded).select("id, name, color_key").order("name");
+      const result = await supabase.from("expense_categories").insert(seeded).select("id, name, color_key, monthly_budget").order("name");
       if (result.error) throw new Error(result.error.message);
       categories = result.data;
     }
