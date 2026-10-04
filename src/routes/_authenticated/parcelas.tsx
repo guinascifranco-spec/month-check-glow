@@ -164,7 +164,7 @@ function ParcelasPage() {
     () =>
       annotated
         .filter((i) => !i.status.isActive)
-        .sort((a, b) => b.status.endDate.getTime() - a.status.endDate.getTime()),
+        .sort((a, b) => (b.status.endDate?.getTime() ?? 0) - (a.status.endDate?.getTime() ?? 0)),
     [annotated],
   );
 
@@ -178,7 +178,7 @@ function ParcelasPage() {
 
   const endingSoon = useMemo(() => {
     const cutoff = addMonths(new Date(), 2);
-    return active.filter((i) => i.status.endDate <= cutoff).length;
+    return active.filter((i) => i.status.endDate !== null && i.status.endDate <= cutoff).length;
   }, [active]);
 
   const largest = useMemo(() => {
@@ -400,7 +400,7 @@ function ParcelasPage() {
                       </button>
                     </div>
                     <div className="mt-3 text-xs text-muted-foreground">
-                      {monthLabel(s.start)} → {monthLabel(s.endDate)} · quitada em {monthLabel(s.endDate)}
+                      {monthLabel(s.start)} → {s.endDate ? monthLabel(s.endDate) : "Sem término"} · quitada em {s.endDate ? monthLabel(s.endDate) : "—"}
                     </div>
                   </div>
                 );

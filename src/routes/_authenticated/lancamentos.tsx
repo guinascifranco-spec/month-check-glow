@@ -30,6 +30,10 @@ export const Route = createFileRoute("/_authenticated/lancamentos")({
   head: () => ({ meta: [
     { title: "Lançamentos — Month Check" },
     { name: "description", content: "Cadastre e analise suas entradas e seus gastos por categoria." },
+    { property: "og:title", content: "Lançamentos — Month Check" },
+    { property: "og:description", content: "Cadastre e analise suas entradas e seus gastos por categoria." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
   ] }),
   component: TransactionsPage,
 });
