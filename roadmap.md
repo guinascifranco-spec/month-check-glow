@@ -23,4 +23,4 @@
 
 - [x] Editar parcelas e assinaturas ativas ou quitadas
 - [x] Definir orçamento recorrente por categoria e comparar com saídas de cada mês
-- [ ] Validar salvamento e leitura de volta nas duas telas com usuário autenticado
+- [x] Validar salvamento e leitura de volta nas duas telas com usuário autenticado
