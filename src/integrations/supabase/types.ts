@@ -136,6 +136,7 @@ export type Database = {
           month: number
           position: number
           quitado: boolean
+          source_month_check_row_id: string | null
           tipo: string
           updated_at: string
           user_id: string
@@ -151,6 +152,7 @@ export type Database = {
           month: number
           position?: number
           quitado?: boolean
+          source_month_check_row_id?: string | null
           tipo: string
           updated_at?: string
           user_id: string
@@ -166,6 +168,7 @@ export type Database = {
           month?: number
           position?: number
           quitado?: boolean
+          source_month_check_row_id?: string | null
           tipo?: string
           updated_at?: string
           user_id?: string
