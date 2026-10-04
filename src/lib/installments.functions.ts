@@ -81,6 +81,27 @@ export const addInstallment = createServerFn({ method: "POST" })
     return row;
   });
 
+export const updateInstallment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: {
+    id: string; name: string; first_date: string; installment_value: number;
+    total_installments: number; kind: "parcelamento" | "assinatura";
+  }) => z.object({
+    id: z.string().uuid(),
+    name: z.string().trim().min(1).max(120),
+    first_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    installment_value: z.number().finite().positive(),
+    total_installments: z.number().int().min(1).max(360),
+    kind: z.enum(["parcelamento", "assinatura"]),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { id, ...changes } = data;
+    const { data: row, error } = await context.supabase.from("installments")
+      .update(changes).eq("id", id).eq("user_id", context.userId).select("*").single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
 export const deleteInstallment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))

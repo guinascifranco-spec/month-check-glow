@@ -196,6 +196,7 @@ export type Database = {
           color_key: string
           created_at: string
           id: string
+          monthly_budget: number | null
           name: string
           updated_at: string
           user_id: string
@@ -204,6 +205,7 @@ export type Database = {
           color_key?: string
           created_at?: string
           id?: string
+          monthly_budget?: number | null
           name: string
           updated_at?: string
           user_id: string
@@ -212,6 +214,7 @@ export type Database = {
           color_key?: string
           created_at?: string
           id?: string
+          monthly_budget?: number | null
           name?: string
           updated_at?: string
           user_id?: string

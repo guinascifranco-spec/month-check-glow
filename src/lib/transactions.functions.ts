@@ -27,14 +27,14 @@ export const getTransactionWorkspace = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     let { data: categories, error: categoryError } = await supabase
       .from("expense_categories")
-      .select("id, name, color_key")
+      .select("id, name, color_key, monthly_budget")
       .eq("user_id", userId)
       .order("name");
     if (categoryError) throw new Error(categoryError.message);
 
     if (!categories?.length) {
       const seeded = DEFAULT_CATEGORIES.map(([name, color_key]) => ({ user_id: userId, name, color_key }));
-      const result = await supabase.from("expense_categories").insert(seeded).select("id, name, color_key").order("name");
+      const result = await supabase.from("expense_categories").insert(seeded).select("id, name, color_key, monthly_budget").order("name");
       if (result.error) throw new Error(result.error.message);
       categories = result.data;
     }
@@ -67,6 +67,38 @@ export const getTransactionWorkspace = createServerFn({ method: "POST" })
     if (rulesError) throw new Error(rulesError.message);
 
     return { categories: categories ?? [], rules: rules ?? [], rows: filtered };
+  });
+
+export const getMonthlyCategorySpending = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { year: number; month: number }) => z.object({
+    year: z.number().int().min(1970).max(3000), month: z.number().int().min(1).max(12),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase.from("month_check_rows")
+      .select("category_id, valor")
+      .eq("user_id", context.userId).eq("year", data.year).eq("month", data.month).eq("tipo", "saida");
+    if (error) throw new Error(error.message);
+    const amounts: Record<string, number> = {};
+    let uncategorized = 0;
+    for (const row of rows ?? []) {
+      if (!row.category_id) { uncategorized += Number(row.valor || 0); continue; }
+      amounts[row.category_id] = (amounts[row.category_id] ?? 0) + Number(row.valor || 0);
+    }
+    return { amounts, uncategorized };
+  });
+
+export const updateCategoryBudget = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string; monthlyBudget: number | null }) => z.object({
+    id: idSchema, monthlyBudget: z.number().finite().min(0).max(999999999999).nullable(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase.from("expense_categories")
+      .update({ monthly_budget: data.monthlyBudget }).eq("id", data.id).eq("user_id", context.userId)
+      .select("id").single();
+    if (error) throw new Error(error.message);
+    return row;
   });
 
 export const createTransaction = createServerFn({ method: "POST" })

@@ -18,3 +18,9 @@
 - [x] Conferir o backup contra os registros existentes e preservar os dados originais
 - [x] Recuperar os 133 itens nos meses correspondentes da Conferência sem duplicações
 - [x] Validar totais e navegação autenticada em abril, setembro e outubro
+
+# Parcelas e orçamento
+
+- [x] Editar parcelas e assinaturas ativas ou quitadas
+- [x] Definir orçamento recorrente por categoria e comparar com saídas de cada mês
+- [x] Validar salvamento e leitura de volta nas duas telas com usuário autenticado

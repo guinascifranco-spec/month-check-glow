@@ -1,0 +1,1 @@
+ALTER TABLE public.expense_categories ADD COLUMN monthly_budget numeric NULL; ALTER TABLE public.expense_categories ADD CONSTRAINT expense_categories_monthly_budget_nonnegative CHECK (monthly_budget IS NULL OR (monthly_budget >= 0 AND monthly_budget < 1000000000000));
