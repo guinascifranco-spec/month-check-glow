@@ -92,7 +92,7 @@ export const copyFromPreviousMonth = createServerFn({ method: "POST" })
     // Puxar itens do mês anterior
     const { data: prevItems, error: selErr } = await supabase
       .from("checklist_items")
-      .select("descricao, tipo, expense_class, valor, position")
+      .select("descricao, tipo, expense_class, valor, position, category_id")
       .eq("user_id", userId)
       .eq("year", prevYear)
       .eq("month", prevMonth)
@@ -111,6 +111,7 @@ export const copyFromPreviousMonth = createServerFn({ method: "POST" })
       expense_class: item.expense_class,
       valor: item.valor, // Mantém o valor planejado anterior
       position: item.position,
+      category_id: item.category_id ?? null,
       quitado: false,
     }));
 
@@ -172,6 +173,7 @@ export const updateChecklistItem = createServerFn({ method: "POST" })
     valor?: number;
     quitado?: boolean;
     expense_class?: "fixo" | "variavel";
+    category_id?: string | null;
   }) =>
     z.object({
       id: z.string().uuid(),
@@ -180,6 +182,7 @@ export const updateChecklistItem = createServerFn({ method: "POST" })
       valor: z.number().optional(),
       quitado: z.boolean().optional(),
       expense_class: z.enum(["fixo", "variavel"]).optional(),
+      category_id: z.string().uuid().nullable().optional(),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -190,6 +193,7 @@ export const updateChecklistItem = createServerFn({ method: "POST" })
     if (data.valor !== undefined) patch.valor = data.valor;
     if (data.quitado !== undefined) patch.quitado = data.quitado;
     if (data.expense_class !== undefined) patch.expense_class = data.expense_class;
+    if ("category_id" in data) patch.category_id = data.category_id;
     const { data: row, error } = await supabase
       .from("checklist_items")
       .update(patch)
@@ -199,6 +203,19 @@ export const updateChecklistItem = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     return row;
+  });
+
+export const getChecklistCategories = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data, error } = await supabase
+      .from("expense_categories")
+      .select("id, name, color_key")
+      .eq("user_id", userId)
+      .order("name", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
   });
 
 export const reorderChecklistItems = createServerFn({ method: "POST" })
