@@ -7,6 +7,7 @@ import { Logo } from "@/components/logo";
 import { InstallPWAButton } from "@/components/install-pwa-button";
 import { MobileNav } from "@/components/mobile-nav";
 import { PageTabs } from "@/components/page-tabs";
+import { CategoryBudget } from "@/components/category-budget";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,8 @@ import {
   deleteExpenseCategory,
   deleteTransaction,
   getTransactionWorkspace,
+  getMonthlyCategorySpending,
+  updateCategoryBudget,
   renameExpenseCategory,
   updateTransaction,
   createCategoryRule,
@@ -38,7 +41,7 @@ export const Route = createFileRoute("/_authenticated/lancamentos")({
   component: TransactionsPage,
 });
 
-type Category = { id: string; name: string; color_key: string };
+type Category = { id: string; name: string; color_key: string; monthly_budget: number | null };
 type Rule = { id: string; keyword: string; category_id: string };
 type Transaction = {
   id: string; year: number; month: number; transaction_date: string | null; descricao: string;
@@ -77,6 +80,8 @@ function TransactionsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fetchWorkspace = useServerFn(getTransactionWorkspace);
+  const fetchMonthlySpending = useServerFn(getMonthlyCategorySpending);
+  const saveBudget = useServerFn(updateCategoryBudget);
   const createFn = useServerFn(createTransaction);
   const updateFn = useServerFn(updateTransaction);
   const deleteFn = useServerFn(deleteTransaction);
@@ -89,6 +94,7 @@ function TransactionsPage() {
 
   const [from, setFrom] = useState(() => firstDayMonthsAgo(6));
   const [to, setTo] = useState(() => localDate());
+  const [budgetPeriod, setBudgetPeriod] = useState(() => ({ year: new Date().getFullYear(), month: new Date().getMonth() + 1 }));
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("todos");
   const [categoryFilter, setCategoryFilter] = useState("todas");
@@ -104,6 +110,10 @@ function TransactionsPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: key,
     queryFn: () => fetchWorkspace({ data: { from, to } }) as Promise<{ categories: Category[]; rules: Rule[]; rows: Transaction[] }>,
+  });
+  const { data: spending = {}, isFetching: spendingLoading } = useQuery({
+    queryKey: ["monthly-category-spending", budgetPeriod.year, budgetPeriod.month],
+    queryFn: () => fetchMonthlySpending({ data: budgetPeriod }),
   });
   
   const categories = data?.categories ?? [];
@@ -175,6 +185,7 @@ function TransactionsPage() {
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["transactions"] });
+    queryClient.invalidateQueries({ queryKey: ["monthly-category-spending"] });
     queryClient.invalidateQueries({ queryKey: ["month-rows"] });
     queryClient.invalidateQueries({ queryKey: ["year-totals"] });
     queryClient.invalidateQueries({ queryKey: ["future-projection"] });
@@ -234,6 +245,14 @@ function TransactionsPage() {
           <Metric icon={TrendingDown} label="Saídas (Filtro)" value={totals.expense} tone="negative" />
           <Metric icon={Wallet} label="Saldo (Filtro)" value={totals.income - totals.expense} tone={totals.income - totals.expense >= 0 ? "positive" : "negative"} />
         </div>
+
+        <CategoryBudget categories={categories} year={budgetPeriod.year} month={budgetPeriod.month}
+          onPeriodChange={(year, month) => setBudgetPeriod({ year, month })}
+          spending={spending} loading={spendingLoading}
+          onSave={async (id, monthlyBudget) => {
+            await saveBudget({ data: { id, monthlyBudget } });
+            await queryClient.invalidateQueries({ queryKey: ["transactions"] });
+          }} />
 
         {suggestions.length > 0 && (
           <div className="neu-raised mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl p-4 border-l-4 border-secondary/50">
