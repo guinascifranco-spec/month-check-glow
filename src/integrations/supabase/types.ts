@@ -128,6 +128,7 @@ export type Database = {
       }
       checklist_items: {
         Row: {
+          category_id: string | null
           created_at: string
           descricao: string
           expense_class: string
@@ -142,6 +143,7 @@ export type Database = {
           year: number
         }
         Insert: {
+          category_id?: string | null
           created_at?: string
           descricao?: string
           expense_class?: string
@@ -156,6 +158,7 @@ export type Database = {
           year: number
         }
         Update: {
+          category_id?: string | null
           created_at?: string
           descricao?: string
           expense_class?: string
@@ -169,7 +172,15 @@ export type Database = {
           valor?: number
           year?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       expense_categories: {
         Row: {
