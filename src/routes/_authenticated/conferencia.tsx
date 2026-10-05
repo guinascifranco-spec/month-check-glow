@@ -568,9 +568,9 @@ function SummaryCard({
 }: { label: string; value: number; tone: "success" | "danger"; emphasize?: boolean }) {
   const color = tone === "success" ? "text-primary" : "text-danger";
   return (
-    <div className={`neu-raised rounded-2xl p-4 sm:p-6 ${emphasize ? "ring-2 ring-offset-2 ring-offset-background ring-primary/20" : ""}`}>
+    <div className={`neu-raised rounded-2xl p-4 sm:p-6 ${emphasize ? "col-span-2 ring-2 ring-offset-2 ring-offset-background ring-primary/20 sm:col-span-1" : ""}`}>
       <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`mt-2 text-2xl font-bold sm:text-3xl ${color}`}>{brl.format(value)}</div>
+      <div className={`mt-2 whitespace-nowrap text-2xl font-bold sm:text-3xl ${color}`}>{brl.format(value)}</div>
     </div>
   );
 }
