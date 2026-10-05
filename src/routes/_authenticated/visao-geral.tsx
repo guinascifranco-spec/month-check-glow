@@ -208,7 +208,7 @@ function VisaoGeralPage() {
           {patrimonyLoading ? (
             <p className="text-sm text-muted-foreground">Carregando lançamentos...</p>
           ) : latestMonth ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
               <SummaryCard label="Entradas" value={latestMonth.entradas} tone="primary" />
               <SummaryCard label="Saídas" value={latestMonth.saidas} tone="danger" />
               <SummaryCard label="Resultado" value={latestMonth.saldo} tone={latestMonth.saldo >= 0 ? "primary" : "danger"} />
@@ -227,7 +227,7 @@ function VisaoGeralPage() {
 
         <section className="mb-8" aria-labelledby="patrimony-title">
           <h2 id="patrimony-title" className="mb-4 text-lg font-bold">Patrimônio</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
             <SummaryCard label="Total investido" value={totalInvestido} tone="secondary" />
             <SummaryCard label="Proventos recebidos" value={totalProventos} tone="primary" />
             <SummaryCard label="Patrimônio total" value={patrimonioTotal} tone="primary" emphasize />
@@ -314,7 +314,7 @@ function VisaoGeralPage() {
             </div>
           )}
 
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="mt-6 max-w-sm">
             <SummaryCard label="Rendimento mensal estimado" value={rendimentoMensal} tone="primary" />
           </div>
         </section>
