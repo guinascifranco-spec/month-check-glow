@@ -2,13 +2,14 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, Trash2, LogOut, GripVertical, Check, Copy, Wand2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, LogOut, GripVertical, Check, Copy, Wand2, AlertCircle, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/logo";
 import { InstallPWAButton } from "@/components/install-pwa-button";
 import { PageTabs } from "@/components/page-tabs";
 import { MobileNav } from "@/components/mobile-nav";
 import { BackupButton } from "@/components/backup-button";
+import { Button } from "@/components/ui/button";
 import {
   getChecklistMonth,
   addChecklistItem,
@@ -175,6 +176,11 @@ function ConferenciaPage() {
     return { entradas, saidas, saldo: entradas - saidas };
   }, [rows]);
 
+  const checkedCount = rows.filter((row) => row.quitado).length;
+  const progress = rows.length > 0 ? (checkedCount / rows.length) * 100 : 0;
+  const pendingClassification = rows.filter((row) => row.tipo === "saida" && !row.category_id);
+  const pendingAmount = pendingClassification.reduce((sum, row) => sum + (Number(row.valor) || 0), 0);
+
   function prevMonth() {
     if (month === 1) { setMonth(12); setYear((y) => y - 1); }
     else setMonth((m) => m - 1);
@@ -233,17 +239,53 @@ function ConferenciaPage() {
           </button>
         </div>
 
-        {/* Summary cards */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:grid-cols-3 sm:gap-4">
+        {/* Monthly summary */}
+        <h2 className="mb-3 text-lg font-bold sm:text-xl">Resumo de {MESES[month - 1]} {year}</h2>
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
           <SummaryCard label="Total Entradas" value={totals.entradas} tone="success" />
           <SummaryCard label="Total Saídas" value={totals.saidas} tone="danger" />
           <SummaryCard
-            label="Planejado"
+            label="Resultado planejado"
             value={totals.saldo}
             tone={totals.saldo >= 0 ? "success" : "danger"}
             emphasize
           />
         </div>
+
+        <section className="mb-6" aria-label="Progresso da conferência">
+          <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h2 className="text-base font-bold sm:text-lg">Conferência do mês</h2>
+            <p className="text-sm font-medium tabular-nums text-muted-foreground">
+              {checkedCount} de {rows.length} lançamentos conferidos
+            </p>
+          </div>
+          <div
+            role="progressbar"
+            aria-label="Conferência do mês"
+            aria-valuemin={0}
+            aria-valuemax={rows.length}
+            aria-valuenow={checkedCount}
+            className="h-2.5 overflow-hidden rounded-full bg-muted"
+          >
+            <div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${progress}%` }} />
+          </div>
+        </section>
+
+        {!isLoading && pendingClassification.length > 0 && (
+          <section className="neu-raised mb-6 flex flex-col gap-4 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5" aria-label="Pendências de classificação">
+            <div className="min-w-0">
+              <h2 className="flex items-center gap-2 text-sm font-bold sm:text-base">
+                <AlertCircle className="h-4 w-4 shrink-0 text-secondary" /> Pendências de classificação
+              </h2>
+              <p className="mt-1 pl-6 text-sm text-muted-foreground tabular-nums">
+                {pendingClassification.length} {pendingClassification.length === 1 ? "lançamento" : "lançamentos"} · {brl.format(pendingAmount)}
+              </p>
+            </div>
+            <Button type="button" variant="outline" className="neu-pressable min-h-11 shrink-0" onClick={() => navigate({ to: "/lancamentos" })}>
+              Classificar agora <ArrowRight className="h-4 w-4" />
+            </Button>
+          </section>
+        )}
 
         {/* Empty State Banner */}
         {!isLoading && isNew && rows.length === 0 && (
@@ -310,7 +352,7 @@ function ConferenciaPage() {
                   <th className="px-4 py-4">Categoria</th>
                   <th className="px-4 py-4 text-right">Entrada (R$)</th>
                   <th className="px-4 py-4 text-right">Saída (R$)</th>
-                  <th className="px-4 py-4 text-center">Quitado</th>
+                  <th className="px-4 py-4 text-center">Conferido</th>
                   <th className="px-4 py-4 text-right">Ação</th>
                 </tr>
               </thead>
@@ -416,7 +458,7 @@ function RowCard({
 
   return (
     <div
-      className={`neu-raised rounded-2xl p-4 ${isDragging ? "opacity-40" : ""} ${quitado ? "opacity-60" : ""}`}
+      className={`neu-raised rounded-2xl p-4 ${isDragging ? "opacity-40" : ""}`}
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDropRow}
     >
@@ -503,10 +545,10 @@ function RowCard({
           type="button"
           onClick={() => onUpdate({ quitado: !quitado })}
           aria-pressed={quitado}
-          aria-label={quitado ? "Marcar como não quitado" : "Marcar como quitado"}
+          aria-label={quitado ? "Marcar como não conferido" : "Marcar como conferido"}
           className={`neu-pressable inline-flex h-11 items-center gap-2 rounded-xl px-3 text-xs font-semibold ${quitado ? "text-primary" : "text-muted-foreground/70"}`}
         >
-          <Check className="h-4 w-4" /> Quitado
+          <Check className={`h-4 w-4 ${quitado ? "opacity-100" : "opacity-40"}`} /> {quitado ? "Conferido" : "Não conferido"}
         </button>
         <button
           type="button"
@@ -526,9 +568,9 @@ function SummaryCard({
 }: { label: string; value: number; tone: "success" | "danger"; emphasize?: boolean }) {
   const color = tone === "success" ? "text-primary" : "text-danger";
   return (
-    <div className={`neu-raised rounded-2xl p-4 sm:p-6 ${emphasize ? "ring-2 ring-offset-2 ring-offset-background ring-primary/20" : ""}`}>
+    <div className={`neu-raised rounded-2xl p-4 sm:p-6 ${emphasize ? "col-span-2 ring-2 ring-offset-2 ring-offset-background ring-primary/20 sm:col-span-1" : ""}`}>
       <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`mt-2 text-2xl font-bold sm:text-3xl ${color}`}>{brl.format(value)}</div>
+      <div className={`mt-2 whitespace-nowrap text-2xl font-bold sm:text-3xl ${color}`}>{brl.format(value)}</div>
     </div>
   );
 }
@@ -584,7 +626,7 @@ function RowItem({
 
   const isEntrada = row.tipo === "entrada";
   const quitado = row.quitado;
-  const rowCls = `border-t border-border/60 transition-opacity ${isDragging ? "opacity-40" : ""} ${quitado ? "opacity-60" : ""}`;
+  const rowCls = `border-t border-border/60 transition-opacity ${isDragging ? "opacity-40" : ""}`;
   const textCls = quitado ? "line-through" : "";
 
   return (
@@ -695,8 +737,9 @@ function RowItem({
           type="button"
           onClick={() => onUpdate({ quitado: !quitado })}
           aria-pressed={quitado}
-          aria-label={quitado ? "Marcar como não quitado" : "Marcar como quitado"}
-          className={`neu-pressable inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${quitado ? "text-primary" : "text-muted-foreground/50"}`}
+          aria-label={quitado ? "Marcar como não conferido" : "Marcar como conferido"}
+          title={quitado ? "Conferido" : "Não conferido"}
+          className={`neu-pressable inline-flex h-11 w-11 items-center justify-center rounded-lg transition-colors ${quitado ? "text-primary" : "text-muted-foreground/50"}`}
         >
           <Check className={`h-4 w-4 transition-opacity ${quitado ? "opacity-100" : "opacity-30"}`} />
         </button>
