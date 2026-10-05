@@ -42,78 +42,127 @@
   --color-chart-5: var(--chart-5);
   --color-chart-6: var(--chart-6);
   --color-chart-7: var(--chart-7);
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "DM Sans", sans-serif;
   --shadow-neu: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);
   --shadow-neu-sm: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);
   --shadow-neu-inset: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light);
 }
 
 :root {
-  --radius: 0.875rem;
-  --background: oklch(0.972 0.008 234);
-  --foreground: oklch(0.27 0.04 254);
-  --card: oklch(0.972 0.008 234);
-  --card-foreground: oklch(0.27 0.04 254);
-  --popover: oklch(0.99 0.003 234);
-  --popover-foreground: oklch(0.27 0.04 254);
-  --primary: oklch(0.7 0.16 165);
-  --primary-foreground: oklch(0.99 0.01 165);
-  --secondary: oklch(0.74 0.13 215);
-  --secondary-foreground: oklch(0.99 0.01 215);
-  --muted: oklch(0.94 0.01 234);
-  --muted-foreground: oklch(0.5 0.03 254);
-  --accent: oklch(0.74 0.13 215);
-  --accent-foreground: oklch(0.99 0.01 215);
-  --destructive: oklch(0.62 0.22 25);
-  --destructive-foreground: oklch(0.99 0.01 25);
-  --success: oklch(0.7 0.16 165);
-  --success-foreground: oklch(0.99 0.01 165);
-  --danger: oklch(0.62 0.22 25);
-  --danger-foreground: oklch(0.99 0.01 25);
-  --border: oklch(0.9 0.01 234);
-  --input: oklch(0.94 0.01 234);
-  --ring: oklch(0.7 0.16 165);
-  --chart-1: oklch(0.7 0.16 165);
-  --chart-2: oklch(0.7 0.13 215);
-  --chart-3: oklch(0.76 0.16 78);
-  --chart-4: oklch(0.64 0.2 25);
-  --chart-5: oklch(0.62 0.14 300);
-  --chart-6: oklch(0.64 0.14 250);
-  --chart-7: oklch(0.68 0.15 340);
-  --neu-shadow-light: rgba(255, 255, 255, 0.85);
-  --neu-shadow-dark: rgba(163, 177, 198, 0.55);
+  --radius: 0.5rem;
+  --background: #F5F6F5;
+  --foreground: #252B29;
+  --card: #FFFFFF;
+  --card-foreground: #252B29;
+  --popover: #FFFFFF;
+  --popover-foreground: #252B29;
+  --primary: #168261;
+  --primary-foreground: #FFFFFF;
+  --secondary: #495B54;
+  --secondary-foreground: #FFFFFF;
+  --muted: #E8EBE9;
+  --muted-foreground: #596660;
+  --accent: #E8EBE9;
+  --accent-foreground: #252B29;
+  --destructive: #B64242;
+  --destructive-foreground: #FFFFFF;
+  --success: #168261;
+  --success-foreground: #FFFFFF;
+  --danger: #B64242;
+  --danger-foreground: #FFFFFF;
+  --border: #D8DEDA;
+  --input: #D8DEDA;
+  --ring: #168261;
+  --chart-1: #168261;
+  --chart-2: #6A8C7C;
+  --chart-3: #98ADA1;
+  --chart-4: #B64242;
+  --chart-5: #708078;
+  --chart-6: #A0ADA7;
+  --chart-7: #43534B;
+  --neu-shadow-light: transparent;
+  --neu-shadow-dark: transparent;
 }
 
 @utility neu-raised {
-  background: var(--color-background);
-  box-shadow: 8px 8px 20px var(--neu-shadow-dark), -8px -8px 20px var(--neu-shadow-light);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  box-shadow: none;
 }
 @utility neu-raised-sm {
-  background: var(--color-background);
-  box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  box-shadow: none;
 }
 @utility neu-inset {
-  background: var(--color-background);
-  box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light);
+  background: var(--color-card);
+  border: 1px solid var(--color-input);
+  box-shadow: none;
 }
 @utility neu-pressable {
-  background: var(--color-background);
-  box-shadow: 6px 6px 14px var(--neu-shadow-dark), -6px -6px 14px var(--neu-shadow-light);
-  transition: box-shadow 150ms ease, transform 150ms ease;
-  &:hover {
-    box-shadow: 4px 4px 10px var(--neu-shadow-dark), -4px -4px 10px var(--neu-shadow-light);
-  }
-  &:active {
-    box-shadow: inset 4px 4px 8px var(--neu-shadow-dark), inset -4px -4px 8px var(--neu-shadow-light);
-  }
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  box-shadow: none;
+  transition: background-color 150ms ease, border-color 150ms ease;
+  &:hover { background: var(--color-muted); border-color: var(--color-muted-foreground); }
+  &:active { background: var(--color-muted); }
 }
 
 @layer base {
   * { border-color: var(--color-border); }
   html, body {
-    background-color: #F0F4F8;
+    background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
+  h1, h2, h3, .finance-value { font-family: var(--font-display); letter-spacing: 0; }
+  h1, h2, h3 { font-weight: 600; }
+  input, select, button { font-family: inherit; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+}
+
+/* Financial work surfaces: sections are open; only form controls and distinct records are framed. */
+.finance-app section.neu-raised {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0;
+  padding: 24px 0;
+  box-shadow: none;
+}
+.finance-app .finance-metric {
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--color-border);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 8px 16px 12px 0;
+  min-width: 0;
+}
+.finance-app .finance-metric:last-child { border-right: 0; }
+.finance-app .finance-metric .finance-value { overflow-wrap: anywhere; line-height: 1.15; }
+.finance-app .finance-ledger {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: none;
+}
+.finance-app .finance-ledger table { border-collapse: collapse; }
+.finance-app .finance-ledger thead { background: var(--color-background); }
+.finance-app .finance-ledger tbody tr:hover { background: var(--color-background); }
+.finance-app .finance-ledger th { font-weight: 500; }
+.finance-app .finance-ledger td { padding-top: 6px; padding-bottom: 6px; }
+.finance-app .finance-ledger input,
+.finance-app .finance-ledger select { background: transparent; border-color: transparent; }
+.finance-app .finance-ledger input:focus,
+.finance-app .finance-ledger select:focus,
+.finance-app .finance-ledger input:hover,
+.finance-app .finance-ledger select:hover { background: var(--color-card); border-color: var(--color-input); }
+.finance-app .finance-line { background: transparent; border: 0; border-bottom: 1px solid var(--color-border); border-radius: 0; box-shadow: none; }
+.finance-app .finance-line:last-child { border-bottom: 0; }
+.finance-app .finance-app-title { font-family: var(--font-display); font-weight: 600; }
+@media (max-width: 639px) {
+  .finance-app .finance-metric:nth-child(2) { border-right: 0; }
 }

@@ -12,7 +12,7 @@ const tabs = [
 export function PageTabs() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <nav className="neu-inset hidden rounded-2xl p-1 lg:inline-flex">
+    <nav className="hidden w-full border-b border-border lg:inline-flex">
       {tabs.map((t) => {
         const active = pathname === t.to;
         return (
@@ -20,9 +20,9 @@ export function PageTabs() {
             key={t.to}
             to={t.to}
             className={
-              "rounded-xl px-4 py-2 text-sm font-semibold transition-all " +
+              "border-b-2 border-transparent px-4 py-3 text-sm font-medium transition-colors " +
               (active
-                ? "neu-pressable text-primary"
+                ? "border-primary text-foreground"
                 : "text-muted-foreground hover:text-foreground")
             }
           >
