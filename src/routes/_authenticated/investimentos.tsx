@@ -606,8 +606,8 @@ function SummaryCard({
         {icon}
         {label}
       </div>
-      <div className="mt-2 text-2xl font-bold text-primary">{value}</div>
-      {sub && <div className="mt-1 truncate text-xs text-muted-foreground">{sub}</div>}
+      <div className="mt-2 break-words text-2xl font-bold text-primary">{value}</div>
+      {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
     </div>
   );
 }
