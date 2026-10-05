@@ -39,7 +39,7 @@ export function PeriodBalanceCard({
         : `Referência do mês inteiro — ${total} dias`;
 
   return (
-    <section className="neu-raised mb-6 rounded-2xl p-4 sm:p-6">
+    <section className="mb-6 border-t border-border pt-6">
       <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Saldo disponível por período
       </div>
@@ -48,7 +48,7 @@ export function PeriodBalanceCard({
       {isLoading ? (
         <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4">
           {[0, 1].map((i) => (
-            <div key={i} className="neu-inset rounded-2xl p-4">
+            <div key={i} className="border-r border-border p-3 last:border-0">
               <div className="h-4 w-20 animate-pulse rounded bg-foreground/10" />
               <div className="mt-3 h-7 w-28 animate-pulse rounded bg-foreground/10" />
               <div className="mt-3 h-3 w-24 animate-pulse rounded bg-foreground/10" />
@@ -58,7 +58,7 @@ export function PeriodBalanceCard({
       ) : (
         <>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="neu-inset rounded-2xl p-4">
+            <div className="border-r border-border p-3 last:border-0">
               <div className="flex min-w-0 items-center gap-2 text-muted-foreground">
                 <CalendarDays className="h-4 w-4 shrink-0" />
                 <span className="truncate text-xs font-semibold uppercase tracking-wider">Por dia</span>
@@ -71,7 +71,7 @@ export function PeriodBalanceCard({
               </div>
             </div>
 
-            <div className="neu-inset rounded-2xl p-4">
+            <div className="border-r border-border p-3 last:border-0">
               <div className="flex min-w-0 items-center gap-2 text-muted-foreground">
                 <CalendarRange className="h-4 w-4 shrink-0" />
                 <span className="truncate text-xs font-semibold uppercase tracking-wider">Por semana</span>
