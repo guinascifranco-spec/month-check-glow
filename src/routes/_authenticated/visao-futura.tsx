@@ -139,7 +139,8 @@ function FutureViewPage() {
 
         <p className="mb-6 text-sm text-muted-foreground">
           Projeção baseada nos dados financeiros registrados no Month Check.
-          <span className="block">Considera o histórico de entradas e gastos, os gastos fixos e as parcelas cadastradas.</span>
+          <span className="block">Usa a média de até três meses com registros para renda e gastos variáveis, os últimos valores fixos e as parcelas enquanto estiverem ativas.</span>
+          <span className="block">Mostra o resultado do fluxo mensal, não o valor dos investimentos ou patrimônio futuro.</span>
         </p>
 
         <section className="neu-raised mb-6 rounded-2xl p-4 sm:p-6">
@@ -164,12 +165,15 @@ function FutureViewPage() {
           <div className="neu-raised rounded-2xl p-10 text-center text-muted-foreground">Calculando sua visão futura...</div>
         ) : (
           <>
-            <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <SummaryCard icon={WalletCards} label="Gasto médio mensal" value={brl.format(summary.average)} tone="neutral" />
-              <SummaryCard icon={TrendingUp} label="Maior resultado mensal" value={brl.format(summary.best.saldo)} detail={summary.best.label} tone={summary.best.saldo >= 0 ? "positive" : "negative"} />
-              <SummaryCard icon={TrendingDown} label="Menor resultado mensal" value={brl.format(summary.worst.saldo)} detail={summary.worst.label} tone={summary.worst.saldo >= 0 ? "positive" : "negative"} />
-              <SummaryCard icon={CalendarCheck} label="Saldo acumulado" value={brl.format(summary.accumulated)} detail={`em ${horizon} ${horizon === 1 ? "mês" : "meses"}`} tone={summary.accumulated > 0 ? "positive" : summary.accumulated < 0 ? "negative" : "neutral"} />
-            </div>
+            <section className="mb-6" aria-labelledby="projected-result-title">
+              <h2 id="projected-result-title" className="mb-3 text-lg font-bold">Resultado projetado</h2>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <SummaryCard icon={CalendarCheck} label="Saldo acumulado" value={brl.format(summary.accumulated)} detail={`em ${horizon} ${horizon === 1 ? "mês" : "meses"}`} tone={summary.accumulated > 0 ? "positive" : summary.accumulated < 0 ? "negative" : "neutral"} />
+                <SummaryCard icon={TrendingUp} label="Maior resultado mensal" value={brl.format(summary.best.saldo)} detail={summary.best.label} tone={summary.best.saldo >= 0 ? "positive" : "negative"} />
+                <SummaryCard icon={TrendingDown} label="Menor resultado mensal" value={brl.format(summary.worst.saldo)} detail={summary.worst.label} tone={summary.worst.saldo >= 0 ? "positive" : "negative"} />
+                <SummaryCard icon={WalletCards} label="Gasto médio mensal" value={brl.format(summary.average)} tone="neutral" />
+              </div>
+            </section>
 
             <ChartSection title="Renda, gastos e saldo" subtitle="Veja como cada mês deve terminar.">
               <ResponsiveContainer width="100%" height="100%">
