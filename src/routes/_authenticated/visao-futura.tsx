@@ -137,6 +137,11 @@ function FutureViewPage() {
 
         <div className="mb-6"><PageTabs /></div>
 
+        <p className="mb-6 text-sm text-muted-foreground">
+          Projeção baseada nos dados financeiros registrados no Month Check.
+          <span className="block">Considera o histórico de entradas e gastos, os gastos fixos e as parcelas cadastradas.</span>
+        </p>
+
         <section className="neu-raised mb-6 rounded-2xl p-4 sm:p-6">
           <div className="mb-4">
             <h2 className="font-bold">Quanto tempo você quer visualizar?</h2>
@@ -161,8 +166,8 @@ function FutureViewPage() {
           <>
             <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
               <SummaryCard icon={WalletCards} label="Gasto médio mensal" value={brl.format(summary.average)} tone="neutral" />
-              <SummaryCard icon={TrendingUp} label="Melhor mês" value={brl.format(summary.best.saldo)} detail={summary.best.label} tone={summary.best.saldo >= 0 ? "positive" : "negative"} />
-              <SummaryCard icon={TrendingDown} label="Pior mês" value={brl.format(summary.worst.saldo)} detail={summary.worst.label} tone={summary.worst.saldo >= 0 ? "positive" : "negative"} />
+              <SummaryCard icon={TrendingUp} label="Maior resultado mensal" value={brl.format(summary.best.saldo)} detail={summary.best.label} tone={summary.best.saldo >= 0 ? "positive" : "negative"} />
+              <SummaryCard icon={TrendingDown} label="Menor resultado mensal" value={brl.format(summary.worst.saldo)} detail={summary.worst.label} tone={summary.worst.saldo >= 0 ? "positive" : "negative"} />
               <SummaryCard icon={CalendarCheck} label="Saldo acumulado" value={brl.format(summary.accumulated)} detail={`em ${horizon} ${horizon === 1 ? "mês" : "meses"}`} tone={summary.accumulated > 0 ? "positive" : summary.accumulated < 0 ? "negative" : "neutral"} />
             </div>
 
