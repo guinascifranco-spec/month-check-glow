@@ -69,6 +69,7 @@ type Ativo = {
   tipo: AssetType;
   nome: string;
   corretora: string | null;
+  saldo_atual: number;
 };
 type Aporte = {
   id: string;
@@ -181,6 +182,11 @@ function InvestimentosPage() {
     [proventos],
   );
   const proventosPendentes = totalProventos - proventosReinvestidos;
+  // A ausência de saldo informado não pode ser confundida com valor de mercado zero.
+  const hasCurrentValues = ativos.length > 0 && ativos.every((ativo) => Number(ativo.saldo_atual) > 0);
+  const currentValue = hasCurrentValues
+    ? ativos.reduce((sum, ativo) => sum + Number(ativo.saldo_atual), 0)
+    : null;
 
   // --- Filtro do gráfico ---
   const [filtroTipo, setFiltroTipo] = useState<AssetType | "todos">("todos");
@@ -290,9 +296,9 @@ function InvestimentosPage() {
         <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           <SummaryCard
             icon={<Wallet className="h-4 w-4" />}
-            label="Patrimônio investido"
+            label="Aportes registrados"
             value={brl.format(totalInvestido)}
-            sub="Somatório de aportes"
+            sub="Inclui aportes com proventos reinvestidos"
           />
           <SummaryCard
             icon={<Coins className="h-4 w-4" />}
@@ -308,11 +314,14 @@ function InvestimentosPage() {
           />
           <SummaryCard
             icon={<Wallet className="h-4 w-4" />}
-            label="Ativos"
-            value={String(ativos.length)}
-            sub={`${aportes.length} aportes`}
+            label="Valor atual"
+            value={currentValue === null ? "Não informado" : brl.format(currentValue)}
+            sub={currentValue === null ? "Sem saldo atual de todos os ativos" : "Soma dos saldos informados dos ativos"}
           />
         </div>
+        <p className="mb-6 text-xs text-muted-foreground">
+          {ativos.length} {ativos.length === 1 ? "ativo" : "ativos"} · {aportes.length} {aportes.length === 1 ? "aporte" : "aportes"}. Aportes registrados não representam o valor atual dos ativos.
+        </p>
 
         {/* Ações rápidas */}
         <div className="mb-6 flex flex-wrap gap-2">
@@ -332,10 +341,10 @@ function InvestimentosPage() {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Evolução patrimonial
+                Evolução dos aportes
               </div>
               <div className="mt-1 text-sm text-muted-foreground">
-                Patrimônio acumulado a custo, por classe.
+                Soma acumulada dos aportes registrados, por classe (não é valor atual).
               </div>
             </div>
             <Select value={filtroTipo} onValueChange={(v) => setFiltroTipo(v as AssetType | "todos")}>
@@ -354,7 +363,7 @@ function InvestimentosPage() {
 
           {chartData.length === 0 ? (
             <div className="neu-inset rounded-xl px-4 py-12 text-center text-sm text-muted-foreground">
-              Registre aportes para ver a evolução do patrimônio.
+              Registre aportes para ver sua evolução.
             </div>
           ) : (
             <div className="h-52 w-full sm:h-72">
@@ -437,7 +446,7 @@ function InvestimentosPage() {
                             </div>
                             <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
                               <Metric label="Qtd" value={m.qtd.toLocaleString("pt-BR")} />
-                              <Metric label="Investido" value={brl.format(m.investido)} />
+                              <Metric label="Aportes" value={brl.format(m.investido)} />
                               <Metric label="Custo médio" value={brl.format(custoMedio)} />
                             </div>
                             <div className="mt-2 text-xs text-muted-foreground">
@@ -597,8 +606,8 @@ function SummaryCard({
         {icon}
         {label}
       </div>
-      <div className="mt-2 text-2xl font-bold text-primary">{value}</div>
-      {sub && <div className="mt-1 truncate text-xs text-muted-foreground">{sub}</div>}
+      <div className="mt-2 break-words text-2xl font-bold text-primary">{value}</div>
+      {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
     </div>
   );
 }
@@ -760,6 +769,7 @@ function NovoAporteDialog({
         <DialogHeader>
           <DialogTitle>Novo aporte</DialogTitle>
         </DialogHeader>
+        <p className="text-sm text-muted-foreground">Aporte é dinheiro destinado à compra do ativo. Se vinculado a um provento, é um reinvestimento — não um novo rendimento.</p>
         <div className="space-y-4">
           <div>
             <Label>Ativo</Label>
@@ -885,6 +895,7 @@ function NovoProventoDialog({
         <DialogHeader>
           <DialogTitle>Novo provento</DialogTitle>
         </DialogHeader>
+        <p className="text-sm text-muted-foreground">Provento é o rendimento distribuído pelo ativo, registrado separadamente dos aportes.</p>
         <div className="space-y-4">
           <div>
             <Label>Ativo</Label>
