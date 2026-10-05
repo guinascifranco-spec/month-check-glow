@@ -1,0 +1,13 @@
+# Terceira evolução incremental — Investimentos e Visão Futura
+
+## O que mudar
+
+1. **Investimentos:** reorganizar os indicadores e textos existentes para distinguir aportes registrados, proventos recebidos e valor atual. Hoje o primeiro indicador soma `valor_total` de todos os aportes, inclusive os vinculados a proventos reinvestidos; portanto não chamá-lo de “capital novo aportado” nem de valor atual. Usar um rótulo fiel, como **Aportes registrados**, com nota discreta de que pode incluir reinvestimentos. Manter o indicador de proventos e seu detalhamento de reinvestidos; exibir **Valor atual** somente se os saldos atuais já registrados dos ativos fornecerem uma base utilizável e identificada como valor informado, sem inferir cotação ou rendimento. Caso contrário, deixar explícito que ainda não há valor atual confiável, sem fabricar um total.
+2. **Formulários existentes:** adicionar uma explicação curta em “Novo aporte” (dinheiro destinado à compra do ativo; quando vinculado a um provento, é reinvestimento) e em “Novo provento” (rendimento distribuído pelo ativo). Preservar o vínculo “Reinvestido” e toda a gravação atual; não apresentar aportes como rendimento nem proventos como novos aportes.
+3. **Visão Futura:** destacar o bloco **Resultado projetado** junto ao saldo acumulado, evolução mensal, horizonte e maior/menor resultado. O cálculo atual usa renda, gastos e saldo, sem projetar investimentos; não mostrar **Patrimônio projetado** nesta página nem somar saldo a patrimônio. Explicar discretamente que a projeção usa os dados registrados e a metodologia existente: média de até três meses com dados para renda e variáveis, últimos valores fixos e parcelas durante sua vigência. Manter os gráficos e seus dados, reduzindo apenas a ênfase de indicadores secundários se necessário, sem criar novos cards.
+4. **Conferência:** antes/depois, comparar os números dos indicadores de investimentos e os dados enviados aos gráficos; validar a distinção entre aporte, provento e reinvestimento com casos de teste sem gravar dados históricos; checar as duas páginas em desktop e celular, a compilação e o fluxo autenticado.
+
+## Detalhes técnicos
+
+- Alterar apenas `src/routes/_authenticated/investimentos.tsx` e `src/routes/_authenticated/visao-futura.tsx`, reaproveitando consultas e componentes existentes. Não alterar migrações, funções financeiras nem registros.
+- `ativos.saldo_atual` é um campo cadastrado, mas o painel atual de Investimentos calcula seu primeiro número a partir de `aportes.valor_total`; evitar substituir silenciosamente uma medida pela outra. A Visão Geral possui outra projeção de patrimônio, com fórmula própria, que permanece intocada.
