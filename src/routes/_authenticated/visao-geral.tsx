@@ -22,7 +22,7 @@ import { PageTabs } from "@/components/page-tabs";
 import { MobileNav } from "@/components/mobile-nav";
 import { Slider } from "@/components/ui/slider";
 import { getAccumulatedWithPatrimony } from "@/lib/shared-metrics.functions";
-import { listAtivos } from "@/lib/investments-portfolio.functions";
+import { listAtivos, listProventos } from "@/lib/investments-portfolio.functions";
 
 export const Route = createFileRoute("/_authenticated/visao-geral")({
   head: () => ({
@@ -75,11 +75,12 @@ function VisaoGeralPage() {
 
   const fetchPatrimony = useServerFn(getAccumulatedWithPatrimony);
   const fetchAtivos = useServerFn(listAtivos);
+  const fetchProventos = useServerFn(listProventos);
 
   const patrimonyKey = ["patrimony-accumulated"] as const;
   const ativosKey = ["ativos"] as const;
 
-  const { data: patrimony } = useQuery({
+  const { data: patrimony, isLoading: patrimonyLoading } = useQuery({
     queryKey: patrimonyKey,
     queryFn: () => fetchPatrimony() as Promise<PatrimonyData>,
   });
@@ -88,11 +89,17 @@ function VisaoGeralPage() {
     queryKey: ativosKey,
     queryFn: () => fetchAtivos() as Promise<Ativo[]>,
   });
+  const { data: proventos = [] } = useQuery({
+    queryKey: ["proventos"],
+    queryFn: () => fetchProventos() as Promise<Array<{ valor: number }>>,
+  });
 
   const monthly = patrimony?.months ?? [];
+  const latestMonth = monthly[monthly.length - 1];
   const totalInvestido = patrimony?.totalInvestido ?? 0;
   const saldoAcumulado = patrimony?.saldoAcumulado ?? 0;
   const patrimonioTotal = patrimony?.patrimonioTotal ?? 0;
+  const totalProventos = proventos.reduce((sum, item) => sum + Number(item.valor), 0);
 
   // Rendimento mensal estimado (soma de saldo_atual × rentabilidade_mensal_pct / 100)
   const rendimentoMensal = useMemo(
@@ -193,18 +200,45 @@ function VisaoGeralPage() {
           <PageTabs />
         </div>
 
-        {/* Balanço Geral cards */}
-        <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-          <SummaryCard label="Saldo acumulado" value={saldoAcumulado} tone="primary" />
-          <SummaryCard label="Total investido" value={totalInvestido} tone="secondary" />
-          <SummaryCard label="Patrimônio total" value={patrimonioTotal} tone="primary" emphasize />
-        </div>
+        <section className="mb-8" aria-labelledby="flow-title">
+          <h2 id="flow-title" className="text-lg font-bold">Fluxo financeiro</h2>
+          <p className="mb-4 text-sm text-muted-foreground">
+            {latestMonth ? `Último mês com lançamentos: ${monthLabel(latestMonth.year, latestMonth.month)}` : "Último mês com lançamentos"}
+          </p>
+          {patrimonyLoading ? (
+            <p className="text-sm text-muted-foreground">Carregando lançamentos...</p>
+          ) : latestMonth ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
+              <SummaryCard label="Entradas" value={latestMonth.entradas} tone="primary" />
+              <SummaryCard label="Saídas" value={latestMonth.saidas} tone="danger" />
+              <SummaryCard label="Resultado" value={latestMonth.saldo} tone={latestMonth.saldo >= 0 ? "primary" : "danger"} />
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Nenhum lançamento registrado para mostrar o fluxo.</p>
+          )}
+        </section>
+
+        <section className="mb-8" aria-labelledby="cash-title">
+          <h2 id="cash-title" className="mb-4 text-lg font-bold">Caixa</h2>
+          <div className="max-w-sm">
+            <SummaryCard label="Saldo acumulado dos lançamentos" value={saldoAcumulado} tone="primary" />
+          </div>
+        </section>
+
+        <section className="mb-8" aria-labelledby="patrimony-title">
+          <h2 id="patrimony-title" className="mb-4 text-lg font-bold">Patrimônio</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
+            <SummaryCard label="Total investido" value={totalInvestido} tone="secondary" />
+            <SummaryCard label="Proventos recebidos" value={totalProventos} tone="primary" />
+            <SummaryCard label="Patrimônio total" value={patrimonioTotal} tone="primary" emphasize />
+          </div>
+        </section>
 
         {/* Histórico */}
         <section className="neu-raised mb-8 rounded-2xl p-4 sm:p-6">
           <div className="mb-4">
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Balanço Geral
+              Evolução financeira
             </div>
             <div className="mt-1 text-sm text-muted-foreground">
               Evolução mês a mês — saldo mensal, acumulado e patrimônio.
@@ -280,8 +314,7 @@ function VisaoGeralPage() {
             </div>
           )}
 
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <SummaryCard label="Total investido" value={totalInvestido} tone="secondary" />
+          <div className="mt-6 max-w-sm">
             <SummaryCard label="Rendimento mensal estimado" value={rendimentoMensal} tone="primary" />
           </div>
         </section>
@@ -293,10 +326,13 @@ function VisaoGeralPage() {
               <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Projeção Futura
               </div>
+              <p className="mt-1 text-sm text-muted-foreground">Projeção baseada nos dados financeiros registrados no Month Check.</p>
               <div className="mt-1 text-sm text-muted-foreground">
                 {modoContribuicao === "auto"
-                  ? `Baseada na média dos últimos ${Math.min(3, monthly.length)} meses + juros compostos dos investimentos.`
-                  : "Baseada no saldo mensal fixo informado + juros compostos dos investimentos."}
+                  ? monthly.length > 0
+                    ? `Média dos últimos ${Math.min(3, monthly.length)} meses com lançamentos e juros compostos dos investimentos.`
+                    : "A média histórica estará disponível quando houver lançamentos; juros compostos dos investimentos."
+                  : "Saldo mensal fixo informado e juros compostos dos investimentos."}
               </div>
               {/* Radio de modo de contribuição */}
               <div className="mt-3 flex flex-wrap items-center gap-4">
