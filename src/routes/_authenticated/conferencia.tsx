@@ -198,14 +198,14 @@ function ConferenciaPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 pb-28 pt-6 sm:px-8 sm:py-8 lg:pb-8">
+    <div className="finance-app min-h-screen px-4 pb-24 pt-4 sm:px-8 sm:py-6 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
         <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:mb-8 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <Logo height={40} />
             <div className="min-w-0">
-              <h1 className="truncate text-xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
+              <h1 className="finance-app-title truncate text-xl sm:text-3xl">Month Check</h1>
               <p className="truncate text-sm text-muted-foreground">Conferência de Planejamento</p>
             </div>
           </div>
@@ -226,22 +226,22 @@ function ConferenciaPage() {
         </div>
 
         {/* Month selector */}
-        <div className="neu-raised mb-6 flex items-center justify-between rounded-2xl p-4">
-          <button onClick={prevMonth} className="neu-pressable min-h-[44px] min-w-[44px] rounded-xl p-3 text-primary">
+        <div className="mb-5 flex items-center justify-between border-y border-border py-3">
+          <button onClick={prevMonth} className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-border bg-card text-primary transition-colors hover:bg-muted">
             <ChevronLeft className="h-5 w-5" />
           </button>
           <div className="min-w-0 text-center">
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Período Planejado</div>
             <div className="truncate text-xl font-bold sm:text-2xl">{MESES[month - 1]} {year}</div>
           </div>
-          <button onClick={nextMonth} className="neu-pressable min-h-[44px] min-w-[44px] rounded-xl p-3 text-primary">
+          <button onClick={nextMonth} className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-border bg-card text-primary transition-colors hover:bg-muted">
             <ChevronRight className="h-5 w-5" />
           </button>
         </div>
 
         {/* Monthly summary */}
         <h2 className="mb-3 text-lg font-bold sm:text-xl">Resumo de {MESES[month - 1]} {year}</h2>
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+        <div className="mb-6 grid grid-cols-2 border-y border-border py-3 sm:grid-cols-3">
           <SummaryCard label="Total Entradas" value={totals.entradas} tone="success" />
           <SummaryCard label="Total Saídas" value={totals.saidas} tone="danger" />
           <SummaryCard
@@ -272,7 +272,7 @@ function ConferenciaPage() {
         </section>
 
         {!isLoading && pendingClassification.length > 0 && (
-          <section className="neu-raised mb-6 flex flex-col gap-4 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5" aria-label="Pendências de classificação">
+          <section className="mb-6 flex flex-col gap-4 rounded-lg border border-danger/20 bg-card p-4 sm:flex-row sm:items-center sm:justify-between" aria-label="Pendências de classificação">
             <div className="min-w-0">
               <h2 className="flex items-center gap-2 text-sm font-bold sm:text-base">
                 <AlertCircle className="h-4 w-4 shrink-0 text-secondary" /> Pendências de classificação
@@ -281,7 +281,7 @@ function ConferenciaPage() {
                 {pendingClassification.length} {pendingClassification.length === 1 ? "lançamento" : "lançamentos"} · {brl.format(pendingAmount)}
               </p>
             </div>
-            <Button type="button" variant="outline" className="neu-pressable min-h-11 shrink-0" onClick={() => navigate({ to: "/lancamentos" })}>
+            <Button type="button" variant="outline" className="min-h-11 shrink-0" onClick={() => navigate({ to: "/lancamentos" })}>
               Classificar agora <ArrowRight className="h-4 w-4" />
             </Button>
           </section>
@@ -341,7 +341,7 @@ function ConferenciaPage() {
         </div>
 
         {/* Table */}
-        <div className="neu-raised hidden overflow-hidden rounded-2xl md:block">
+        <div className="finance-ledger hidden overflow-hidden md:block">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -458,7 +458,7 @@ function RowCard({
 
   return (
     <div
-      className={`neu-raised rounded-2xl p-4 ${isDragging ? "opacity-40" : ""}`}
+      className={`finance-line py-4 ${isDragging ? "opacity-40" : ""}`}
       onDragOver={(e) => e.preventDefault()}
       onDrop={onDropRow}
     >
@@ -568,9 +568,9 @@ function SummaryCard({
 }: { label: string; value: number; tone: "success" | "danger"; emphasize?: boolean }) {
   const color = tone === "success" ? "text-primary" : "text-danger";
   return (
-    <div className={`neu-raised rounded-2xl p-4 sm:p-6 ${emphasize ? "col-span-2 ring-2 ring-offset-2 ring-offset-background ring-primary/20 sm:col-span-1" : ""}`}>
+    <div className={`finance-metric ${emphasize ? "col-span-2 border-l-2 border-primary pl-4 sm:col-span-1" : ""}`}>
       <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`mt-2 whitespace-nowrap text-2xl font-bold sm:text-3xl ${color}`}>{brl.format(value)}</div>
+      <div className={`finance-value mt-2 whitespace-nowrap text-2xl font-semibold sm:text-3xl ${color}`}>{brl.format(value)}</div>
     </div>
   );
 }

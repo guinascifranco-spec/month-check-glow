@@ -80,8 +80,8 @@ function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="neu-raised w-full max-w-md rounded-3xl p-8">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 sm:p-8">
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo height={64} className="mb-3" />
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Month Check</h1>
@@ -89,18 +89,18 @@ function AuthPage() {
           <InstallPWAButton className="mt-4" />
         </div>
 
-        <div className="neu-inset mb-6 flex rounded-full p-1">
+        <div className="mb-6 grid grid-cols-2 border-b border-border">
           <button
             type="button"
             onClick={() => setMode("login")}
-            className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition-all ${mode === "login" ? "neu-raised-sm text-primary" : "text-muted-foreground"}`}
+            className={`flex-1 border-b-2 border-transparent px-4 py-3 text-sm font-medium transition-colors ${mode === "login" ? "border-primary text-primary" : "text-muted-foreground"}`}
           >
             Entrar
           </button>
           <button
             type="button"
             onClick={() => setMode("signup")}
-            className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition-all ${mode === "signup" ? "neu-raised-sm text-primary" : "text-muted-foreground"}`}
+            className={`flex-1 border-b-2 border-transparent px-4 py-3 text-sm font-medium transition-colors ${mode === "signup" ? "border-primary text-primary" : "text-muted-foreground"}`}
           >
             Cadastrar
           </button>
@@ -116,7 +116,7 @@ function AuthPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="neu-inset w-full rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full rounded-md border border-input bg-card px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/40"
               placeholder="voce@exemplo.com"
             />
           </div>
@@ -130,7 +130,7 @@ function AuthPage() {
               minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="neu-inset w-full rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full rounded-md border border-input bg-card px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/40"
               placeholder="••••••••"
             />
           </div>
@@ -141,8 +141,7 @@ function AuthPage() {
           <button
             type="submit"
             disabled={loading}
-            className="neu-pressable w-full rounded-xl bg-gradient-to-r from-primary to-secondary py-3 text-sm font-semibold shadow-lg disabled:opacity-60"
-            style={{ color: '#18273A' }}
+            className="w-full rounded-md border border-primary bg-primary py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
           >
             {loading ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}
           </button>
@@ -158,7 +157,7 @@ function AuthPage() {
           type="button"
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className="neu-pressable flex w-full items-center justify-center gap-2 rounded-xl bg-background py-3 text-sm font-semibold text-foreground disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-md border border-border bg-card py-3 text-sm font-semibold text-foreground disabled:opacity-60"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
             <path

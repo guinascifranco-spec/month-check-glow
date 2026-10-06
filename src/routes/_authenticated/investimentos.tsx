@@ -267,13 +267,13 @@ function InvestimentosPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 pb-28 pt-6 sm:px-8 sm:py-8 lg:pb-8">
+    <div className="finance-app min-h-screen px-4 pb-24 pt-4 sm:px-8 sm:py-6 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <Logo height={40} />
             <div className="min-w-0">
-              <h1 className="truncate text-xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
+              <h1 className="finance-app-title truncate text-xl sm:text-3xl">Month Check</h1>
               <p className="text-sm text-muted-foreground">Investimentos</p>
             </div>
           </div>
@@ -371,20 +371,20 @@ function InvestimentosPage() {
                 <AreaChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gAcao" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10B981" stopOpacity={0.7} />
-                      <stop offset="100%" stopColor="#10B981" stopOpacity={0.05} />
+                      <stop offset="0%" stopColor="var(--color-chart-1)" stopOpacity={0.7} />
+                      <stop offset="100%" stopColor="var(--color-chart-1)" stopOpacity={0.05} />
                     </linearGradient>
                     <linearGradient id="gFii" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#06B6D4" stopOpacity={0.7} />
-                      <stop offset="100%" stopColor="#06B6D4" stopOpacity={0.05} />
+                      <stop offset="0%" stopColor="var(--color-chart-2)" stopOpacity={0.7} />
+                      <stop offset="100%" stopColor="var(--color-chart-2)" stopOpacity={0.05} />
                     </linearGradient>
                     <linearGradient id="gRf" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#0EA5E9" stopOpacity={0.7} />
-                      <stop offset="100%" stopColor="#0EA5E9" stopOpacity={0.05} />
+                      <stop offset="0%" stopColor="var(--color-chart-3)" stopOpacity={0.7} />
+                      <stop offset="100%" stopColor="var(--color-chart-3)" stopOpacity={0.05} />
                     </linearGradient>
                     <linearGradient id="gCr" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.7} />
-                      <stop offset="100%" stopColor="#8B5CF6" stopOpacity={0.05} />
+                      <stop offset="0%" stopColor="var(--color-chart-5)" stopOpacity={0.7} />
+                      <stop offset="100%" stopColor="var(--color-chart-5)" stopOpacity={0.05} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
@@ -397,10 +397,10 @@ function InvestimentosPage() {
                     formatter={(v: number, name) => [brl.format(Number(v)), TIPO_LABEL[name as AssetType] || name]}
                   />
                   <Legend formatter={(v) => TIPO_LABEL[v as AssetType] || v} />
-                  <Area type="monotone" dataKey="acao" stackId="1" stroke="#10B981" fill="url(#gAcao)" />
-                  <Area type="monotone" dataKey="fii" stackId="1" stroke="#06B6D4" fill="url(#gFii)" />
-                  <Area type="monotone" dataKey="renda_fixa" stackId="1" stroke="#0EA5E9" fill="url(#gRf)" />
-                  <Area type="monotone" dataKey="cripto" stackId="1" stroke="#8B5CF6" fill="url(#gCr)" />
+                  <Area type="monotone" dataKey="acao" stackId="1" stroke="var(--color-chart-1)" fill="url(#gAcao)" />
+                  <Area type="monotone" dataKey="fii" stackId="1" stroke="var(--color-chart-2)" fill="url(#gFii)" />
+                  <Area type="monotone" dataKey="renda_fixa" stackId="1" stroke="var(--color-chart-3)" fill="url(#gRf)" />
+                  <Area type="monotone" dataKey="cripto" stackId="1" stroke="var(--color-chart-5)" fill="url(#gCr)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -428,7 +428,7 @@ function InvestimentosPage() {
                         const m = porAtivo.get(a.id) ?? { qtd: 0, investido: 0, proventos: 0 };
                         const custoMedio = m.qtd > 0 ? m.investido / m.qtd : 0;
                         return (
-                          <div key={a.id} className="neu-inset rounded-xl p-4">
+                          <div key={a.id} className="finance-line py-4">
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0 flex-1">
                                 <div className="truncate text-base font-semibold">{a.nome}</div>
@@ -474,7 +474,7 @@ function InvestimentosPage() {
               {aportes.slice(0, 20).map((ap) => {
                 const a = ativos.find((x) => x.id === ap.ativo_id);
                 return (
-                  <div key={ap.id} className="neu-inset flex items-center justify-between rounded-xl px-4 py-3">
+                  <div key={ap.id} className="finance-line flex items-center justify-between py-3">
                     <div className="min-w-0">
                       <div className="truncate text-sm font-semibold">
                         {a?.nome ?? "?"}{" "}
@@ -516,7 +516,7 @@ function InvestimentosPage() {
               {proventos.map((pv) => {
                 const a = ativos.find((x) => x.id === pv.ativo_id);
                 return (
-                  <div key={pv.id} className="neu-inset flex items-center justify-between rounded-xl px-4 py-3">
+                  <div key={pv.id} className="finance-line flex items-center justify-between py-3">
                     <div className="min-w-0">
                       <div className="truncate text-sm font-semibold">
                         {a?.nome ?? "?"}{" "}
@@ -601,12 +601,12 @@ function SummaryCard({
   sub?: string;
 }) {
   return (
-    <div className="neu-raised rounded-2xl p-4 sm:p-5">
+    <div className="finance-metric">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {icon}
         {label}
       </div>
-      <div className="mt-2 break-words text-2xl font-bold text-primary">{value}</div>
+      <div className="finance-value mt-2 break-words text-2xl font-semibold text-primary">{value}</div>
       {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
     </div>
   );
