@@ -117,13 +117,13 @@ function FutureViewPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 pb-28 pt-6 sm:px-8 sm:py-8 lg:pb-8">
+    <div className="finance-app min-h-screen px-4 pb-24 pt-4 sm:px-8 sm:py-6 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:mb-8 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <Logo height={40} />
             <div className="min-w-0">
-              <h1 className="truncate text-xl font-bold sm:text-3xl">Month Check</h1>
+              <h1 className="finance-app-title truncate text-xl sm:text-3xl">Month Check</h1>
               <p className="truncate text-sm text-muted-foreground">Visão dos próximos meses</p>
             </div>
           </div>

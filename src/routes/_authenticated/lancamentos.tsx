@@ -173,7 +173,7 @@ function TransactionsPage() {
     });
   }, [groupedRows]);
 
-  const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#64748b'];
+  const COLORS = ['var(--color-chart-1)', 'var(--color-chart-2)', 'var(--color-chart-3)', 'var(--color-chart-4)', 'var(--color-chart-5)', 'var(--color-chart-6)', 'var(--color-chart-7)'];
 
   // Suggestions
   const suggestions = useMemo(() => {
@@ -213,10 +213,10 @@ function TransactionsPage() {
   async function signOut() { await queryClient.cancelQueries(); queryClient.clear(); await supabase.auth.signOut(); navigate({ to: "/auth", replace: true }); }
 
   return (
-    <div className="min-h-screen px-4 pb-28 pt-6 sm:px-8 sm:py-8 lg:pb-8">
+    <div className="finance-app min-h-screen px-4 pb-24 pt-4 sm:px-8 sm:py-6 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:mb-8 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
-          <div className="flex min-w-0 items-center gap-3"><Logo height={40} /><div className="min-w-0"><h1 className="truncate text-xl font-bold sm:text-3xl">Month Check</h1><p className="truncate text-sm text-muted-foreground">Histórico Oficial (Lançamentos)</p></div></div>
+          <div className="flex min-w-0 items-center gap-3"><Logo height={40} /><div className="min-w-0"><h1 className="finance-app-title truncate text-xl sm:text-3xl">Month Check</h1><p className="truncate text-sm text-muted-foreground">Histórico Oficial (Lançamentos)</p></div></div>
           <div className="flex items-center gap-2"><InstallPWAButton /><Button variant="ghost" onClick={signOut} className="neu-pressable min-h-11"><LogOut /><span className="hidden sm:inline">Sair</span></Button></div>
         </header>
         
@@ -295,8 +295,8 @@ function TransactionsPage() {
                     <YAxis tickFormatter={(val) => `R$${val > 1000 ? (val/1000).toFixed(0)+'k' : val}`} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
                     <Tooltip cursor={{ fill: 'hsl(var(--muted)/0.3)' }} formatter={(value: number) => brl.format(value)} contentStyle={{ borderRadius: '8px', border: 'none', backgroundColor: 'hsl(var(--background))', color: 'hsl(var(--foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                     <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
-                    <Bar dataKey="Entradas" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                    <Bar dataKey="Saídas" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    <Bar dataKey="Entradas" fill="var(--color-primary)" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    <Bar dataKey="Saídas" fill="var(--color-danger)" radius={[4, 4, 0, 0]} maxBarSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -310,7 +310,7 @@ function TransactionsPage() {
               const [y, m] = groupKey.split("-");
               const monthName = `${MONTHS[parseInt(m, 10) - 1]} ${y}`;
               return (
-                <div key={groupKey} className="neu-raised rounded-2xl overflow-hidden">
+                <div key={groupKey} className="finance-ledger overflow-hidden">
                   <div className="bg-muted/30 px-4 py-3 font-bold border-b border-border/50 text-sm tracking-wide">
                     {monthName}
                   </div>
@@ -336,7 +336,7 @@ function TransactionsPage() {
 }
 
 function FilterField({ label, children }: { label: string; children: React.ReactNode }) { return <label><span className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">{label}</span>{children}</label>; }
-function Metric({ icon: Icon, label, value, tone }: { icon: typeof Wallet; label: string; value: number; tone: "positive" | "negative" }) { return <article className="neu-raised rounded-2xl p-4 sm:p-5"><div className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground"><Icon className="h-4 w-4" />{label}</div><div className={`mt-2 break-words text-xl font-bold sm:text-2xl ${tone === "positive" ? "text-primary" : "text-danger"}`}>{brl.format(value)}</div></article>; }
+function Metric({ icon: Icon, label, value, tone }: { icon: typeof Wallet; label: string; value: number; tone: "positive" | "negative" }) { return <article className="finance-metric"><div className="flex items-center gap-2 text-xs font-semibold uppercase text-muted-foreground"><Icon className="h-4 w-4" />{label}</div><div className={`finance-value mt-2 break-words text-xl font-semibold sm:text-2xl ${tone === "positive" ? "text-primary" : "text-danger"}`}>{brl.format(value)}</div></article>; }
 function Empty({ text }: { text: string }) { return <div className="neu-inset rounded-xl p-8 text-center text-sm text-muted-foreground">{text}</div>; }
 
 function TransactionRow({ row, category, onEdit, onDelete }: { row: Transaction; category?: string; onEdit: () => void; onDelete: () => void }) {
@@ -377,7 +377,7 @@ function TransactionDialog({ open, onOpenChange, form, setForm, categories, savi
 
 function CategoriesDialog({ open, onOpenChange, categories, onCreate, onRename, onDelete }: { open: boolean; onOpenChange: (value: boolean) => void; categories: Category[]; onCreate: (name: string, color: string) => Promise<void>; onRename: (id: string, name: string) => Promise<void>; onDelete: (id: string) => Promise<void> }) {
   const [name, setName] = useState("");
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent><DialogHeader><DialogTitle>Categorias de gastos</DialogTitle></DialogHeader><div className="space-y-3 overflow-y-auto max-h-[50vh]">{categories.map((category) => <div key={category.id} className="neu-inset flex items-center gap-2 rounded-xl p-2"><input defaultValue={category.name} onBlur={(event) => { const next = event.target.value.trim(); if (next && next !== category.name) void onRename(category.id, next); }} className="min-h-11 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none"/><Button variant="ghost" size="icon" className="h-11 w-11 text-danger shrink-0" onClick={() => void onDelete(category.id)} aria-label={`Excluir ${category.name}`}><Trash2 /></Button></div>)}</div><div className="flex gap-2 pt-2"><Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Nova categoria"/><Button disabled={!name.trim()} onClick={async () => { await onCreate(name.trim(), "emerald"); setName(""); }}><Plus/>Adicionar</Button></div><DialogFooter><Button onClick={() => onOpenChange(false)}>Concluir</Button></DialogFooter></DialogContent></Dialog>;
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent><DialogHeader><DialogTitle>Categorias de gastos</DialogTitle></DialogHeader><div className="space-y-3 overflow-y-auto max-h-[50vh]">{categories.map((category) => <div key={category.id} className="finance-line flex items-center gap-2 py-2"><input defaultValue={category.name} onBlur={(event) => { const next = event.target.value.trim(); if (next && next !== category.name) void onRename(category.id, next); }} className="min-h-11 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none"/><Button variant="ghost" size="icon" className="h-11 w-11 text-danger shrink-0" onClick={() => void onDelete(category.id)} aria-label={`Excluir ${category.name}`}><Trash2 /></Button></div>)}</div><div className="flex gap-2 pt-2"><Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Nova categoria"/><Button disabled={!name.trim()} onClick={async () => { await onCreate(name.trim(), "emerald"); setName(""); }}><Plus/>Adicionar</Button></div><DialogFooter><Button onClick={() => onOpenChange(false)}>Concluir</Button></DialogFooter></DialogContent></Dialog>;
 }
 
 function RulesDialog({ open, onOpenChange, rules, categories, categoryNames, onCreate, onDelete }: { open: boolean; onOpenChange: (value: boolean) => void; rules: Rule[]; categories: Category[]; categoryNames: Map<string, string>; onCreate: (keyword: string, categoryId: string) => Promise<void>; onDelete: (id: string) => Promise<void> }) {

@@ -211,13 +211,13 @@ function ParcelasPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 pb-28 pt-6 sm:px-8 sm:py-8 lg:pb-8">
+    <div className="finance-app min-h-screen px-4 pb-24 pt-4 sm:px-8 sm:py-6 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <Logo height={40} />
             <div className="min-w-0">
-              <h1 className="truncate text-xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
+              <h1 className="finance-app-title truncate text-xl sm:text-3xl">Month Check</h1>
               <p className="text-sm text-muted-foreground">Gastos parcelados</p>
             </div>
           </div>
@@ -323,7 +323,7 @@ function ParcelasPage() {
                 const isAssinatura = it.kind === "assinatura";
                 const progressPct = isAssinatura ? 100 : (s.paid / (s.total as number)) * 100;
                 return (
-                  <div key={it.id} className="neu-inset rounded-xl p-4">
+                  <div key={it.id} className="finance-line py-4">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
@@ -389,7 +389,7 @@ function ParcelasPage() {
               {history.map((it) => {
                 const s = it.status;
                 return (
-                  <div key={it.id} className="neu-inset rounded-xl p-4">
+                  <div key={it.id} className="finance-line py-4">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-base font-semibold">{it.name}</div>
@@ -443,11 +443,11 @@ function SummaryCard({
   sub?: string;
 }) {
   return (
-    <div className="neu-raised rounded-2xl p-4 sm:p-5">
+    <div className="finance-metric">
       <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </div>
-      <div className="mt-2 text-2xl font-bold text-primary">{value}</div>
+      <div className="finance-value mt-2 text-2xl font-semibold text-primary">{value}</div>
       {sub && <div className="mt-1 truncate text-xs text-muted-foreground">{sub}</div>}
     </div>
   );

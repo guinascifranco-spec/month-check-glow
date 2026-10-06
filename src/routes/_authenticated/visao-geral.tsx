@@ -174,14 +174,14 @@ function VisaoGeralPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 pb-28 pt-6 sm:px-8 sm:py-8 lg:pb-8">
+    <div className="finance-app min-h-screen px-4 pb-24 pt-4 sm:px-8 sm:py-6 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
         <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
           <div className="flex min-w-0 items-center gap-3">
             <Logo height={40} />
             <div className="min-w-0">
-              <h1 className="truncate text-xl font-bold tracking-tight sm:text-3xl">Month Check</h1>
+              <h1 className="finance-app-title truncate text-xl sm:text-3xl">Month Check</h1>
               <p className="text-sm text-muted-foreground">Visão geral do patrimônio</p>
             </div>
           </div>
@@ -469,12 +469,12 @@ function SummaryCard({
     tone === "primary" ? "text-primary" : tone === "secondary" ? "text-secondary" : "text-danger";
   return (
     <div
-      className={`neu-raised rounded-2xl p-4 sm:p-6 ${
-        emphasize ? "ring-2 ring-offset-2 ring-offset-background ring-primary/20" : ""
+      className={`finance-metric ${
+        emphasize ? "border-l-2 border-primary pl-4" : ""
       }`}
     >
       <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`mt-2 text-2xl font-bold sm:text-3xl ${color}`}>{brl.format(value)}</div>
+      <div className={`finance-value mt-2 text-2xl font-semibold sm:text-3xl ${color}`}>{brl.format(value)}</div>
     </div>
   );
 }
