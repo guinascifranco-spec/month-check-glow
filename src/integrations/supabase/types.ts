@@ -314,6 +314,27 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_ai_access_state: {
+        Row: {
+          id: boolean
+          message: string
+          status: number
+          updated_at: string
+        }
+        Insert: {
+          id?: boolean
+          message: string
+          status: number
+          updated_at?: string
+        }
+        Update: {
+          id?: boolean
+          message?: string
+          status?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       month_check_rows: {
         Row: {
           category_id: string | null
@@ -321,6 +342,11 @@ export type Database = {
           descricao: string
           expense_class: string
           id: string
+          invoice_card: string | null
+          invoice_installment_current: number | null
+          invoice_installment_total: number | null
+          invoice_line: number | null
+          invoice_source: string | null
           month: number
           position: number
           quitado: boolean
@@ -337,6 +363,11 @@ export type Database = {
           descricao?: string
           expense_class?: string
           id?: string
+          invoice_card?: string | null
+          invoice_installment_current?: number | null
+          invoice_installment_total?: number | null
+          invoice_line?: number | null
+          invoice_source?: string | null
           month: number
           position?: number
           quitado?: boolean
@@ -353,6 +384,11 @@ export type Database = {
           descricao?: string
           expense_class?: string
           id?: string
+          invoice_card?: string | null
+          invoice_installment_current?: number | null
+          invoice_installment_total?: number | null
+          invoice_line?: number | null
+          invoice_source?: string | null
           month?: number
           position?: number
           quitado?: boolean
@@ -432,7 +468,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      import_invoice_rows: {
+        Args: {
+          p_acknowledge?: boolean
+          p_card: string
+          p_dry_run?: boolean
+          p_rows: Json
+          p_source: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       asset_type: "acao" | "fii" | "renda_fixa" | "cripto"

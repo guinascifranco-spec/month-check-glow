@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791415826686,
+      "tag": "0000_invoice_import_metadata",
+      "breakpoints": true
+    }
+  ]
+}
