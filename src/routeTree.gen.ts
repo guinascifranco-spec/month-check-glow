@@ -18,6 +18,7 @@ import { Route as AuthenticatedLancamentosRouteImport } from './routes/_authenti
 import { Route as AuthenticatedParcelasRouteImport } from './routes/_authenticated/parcelas'
 import { Route as AuthenticatedVisaoFuturaRouteImport } from './routes/_authenticated/visao-futura'
 import { Route as AuthenticatedVisaoGeralRouteImport } from './routes/_authenticated/visao-geral'
+import { Route as ApiAnalisarFaturaRouteImport } from './routes/api/analisar-fatura'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -67,6 +68,11 @@ const AuthenticatedVisaoGeralRoute = AuthenticatedVisaoGeralRouteImport.update({
   path: '/visao-geral',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiAnalisarFaturaRoute = ApiAnalisarFaturaRouteImport.update({
+  id: '/api/analisar-fatura',
+  path: '/api/analisar-fatura',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/parcelas': typeof AuthenticatedParcelasRoute
   '/visao-futura': typeof AuthenticatedVisaoFuturaRoute
   '/visao-geral': typeof AuthenticatedVisaoGeralRoute
+  '/api/analisar-fatura': typeof ApiAnalisarFaturaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByTo {
   '/parcelas': typeof AuthenticatedParcelasRoute
   '/visao-futura': typeof AuthenticatedVisaoFuturaRoute
   '/visao-geral': typeof AuthenticatedVisaoGeralRoute
+  '/api/analisar-fatura': typeof ApiAnalisarFaturaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   '/_authenticated/parcelas': typeof AuthenticatedParcelasRoute
   '/_authenticated/visao-futura': typeof AuthenticatedVisaoFuturaRoute
   '/_authenticated/visao-geral': typeof AuthenticatedVisaoGeralRoute
+  '/api/analisar-fatura': typeof ApiAnalisarFaturaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/parcelas'
     | '/visao-futura'
     | '/visao-geral'
+    | '/api/analisar-fatura'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/parcelas'
     | '/visao-futura'
     | '/visao-geral'
+    | '/api/analisar-fatura'
   id:
     | '__root__'
     | '/'
@@ -132,12 +143,14 @@ export interface FileRouteTypes {
     | '/_authenticated/parcelas'
     | '/_authenticated/visao-futura'
     | '/_authenticated/visao-geral'
+    | '/api/analisar-fatura'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiAnalisarFaturaRoute: typeof ApiAnalisarFaturaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVisaoGeralRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/analisar-fatura': {
+      id: '/api/analisar-fatura'
+      path: '/api/analisar-fatura'
+      fullPath: '/api/analisar-fatura'
+      preLoaderRoute: typeof ApiAnalisarFaturaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -233,6 +253,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiAnalisarFaturaRoute: ApiAnalisarFaturaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
