@@ -1,5 +1,12 @@
 # Visão Futura
 
+# Analisar fatura
+
+- [ ] Análise autenticada de PDF/imagem com resposta estruturada e cancelamento
+- [ ] Prévia editável, conferência de centavos e confirmação obrigatória
+- [ ] Importação atômica, metadados de parcelas e prevenção de duplicidade
+- [ ] Navegação editorial e validação desktop/mobile e chamadas reais de IA
+
 - [x] Classificar saídas como fixas ou variáveis na Conferência
 - [x] Calcular projeção combinando lançamentos e parcelas
 - [x] Criar a página Visão Futura com resumos, gráficos e eventos
