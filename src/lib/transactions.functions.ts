@@ -47,7 +47,7 @@ export const getTransactionWorkspace = createServerFn({ method: "POST" })
     const toMonth = toDate.getUTCMonth() + 1;
     const { data: rows, error: rowError } = await supabase
       .from("month_check_rows")
-      .select("id, year, month, transaction_date, descricao, tipo, valor, quitado, expense_class, category_id, position")
+      .select("id, year, month, transaction_date, descricao, tipo, valor, quitado, expense_class, category_id, position, invoice_installment_current, invoice_installment_total")
       .eq("user_id", userId)
       .or(`and(year.eq.${fromYear},month.gte.${fromMonth}),and(year.gt.${fromYear},year.lt.${toYear}),and(year.eq.${toYear},month.lte.${toMonth})`)
       .order("year", { ascending: false })
@@ -139,7 +139,7 @@ export const createTransaction = createServerFn({ method: "POST" })
 
 export const updateTransaction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; date: string; description: string; type: "entrada" | "saida"; value: number; categoryId?: string | null; expenseClass: "fixo" | "variavel"; settled: boolean }) =>
+  .inputValidator((input: { id: string; date: string; description: string; type: "entrada" | "saida"; value: number; categoryId?: string | null; expenseClass: "fixo" | "variavel"; settled: boolean; installmentCurrent?: number | null; installmentTotal?: number | null }) =>
     z.object({
       id: idSchema,
       date: dateSchema,
@@ -149,7 +149,9 @@ export const updateTransaction = createServerFn({ method: "POST" })
       categoryId: idSchema.nullish(),
       expenseClass: z.enum(["fixo", "variavel"]),
       settled: z.boolean(),
-    }).parse(input),
+      installmentCurrent: z.number().int().min(1).max(360).nullish(),
+      installmentTotal: z.number().int().min(1).max(360).nullish(),
+    }).refine(v => (v.installmentCurrent == null && v.installmentTotal == null) || (v.installmentCurrent != null && v.installmentTotal != null && v.installmentCurrent <= v.installmentTotal), "Parcelas inválidas").parse(input),
   )
   .handler(async ({ data, context }) => {
     const [year, month] = data.date.split("-").map(Number);
@@ -163,6 +165,7 @@ export const updateTransaction = createServerFn({ method: "POST" })
       category_id: data.type === "saida" ? (data.categoryId ?? null) : null,
       expense_class: data.type === "saida" ? data.expenseClass : "variavel",
       quitado: data.settled,
+      ...(data.installmentCurrent !== undefined ? { invoice_installment_current: data.installmentCurrent, invoice_installment_total: data.installmentTotal ?? null } : {}),
     }).eq("id", data.id).eq("user_id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };

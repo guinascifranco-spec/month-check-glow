@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedAnalisarFaturaRouteImport } from './routes/_authenticated/analisar-fatura'
 import { Route as AuthenticatedConferenciaRouteImport } from './routes/_authenticated/conferencia'
 import { Route as AuthenticatedInvestimentosRouteImport } from './routes/_authenticated/investimentos'
 import { Route as AuthenticatedLancamentosRouteImport } from './routes/_authenticated/lancamentos'
@@ -34,6 +35,12 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAnalisarFaturaRoute =
+  AuthenticatedAnalisarFaturaRouteImport.update({
+    id: '/analisar-fatura',
+    path: '/analisar-fatura',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedConferenciaRoute =
   AuthenticatedConferenciaRouteImport.update({
     id: '/conferencia',
@@ -77,6 +84,7 @@ const ApiAnalisarFaturaRoute = ApiAnalisarFaturaRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/analisar-fatura': typeof AuthenticatedAnalisarFaturaRoute
   '/conferencia': typeof AuthenticatedConferenciaRoute
   '/investimentos': typeof AuthenticatedInvestimentosRoute
   '/lancamentos': typeof AuthenticatedLancamentosRoute
@@ -88,6 +96,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/analisar-fatura': typeof AuthenticatedAnalisarFaturaRoute
   '/conferencia': typeof AuthenticatedConferenciaRoute
   '/investimentos': typeof AuthenticatedInvestimentosRoute
   '/lancamentos': typeof AuthenticatedLancamentosRoute
@@ -101,6 +110,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/analisar-fatura': typeof AuthenticatedAnalisarFaturaRoute
   '/_authenticated/conferencia': typeof AuthenticatedConferenciaRoute
   '/_authenticated/investimentos': typeof AuthenticatedInvestimentosRoute
   '/_authenticated/lancamentos': typeof AuthenticatedLancamentosRoute
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/analisar-fatura'
     | '/conferencia'
     | '/investimentos'
     | '/lancamentos'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/analisar-fatura'
     | '/conferencia'
     | '/investimentos'
     | '/lancamentos'
@@ -137,6 +149,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/analisar-fatura'
     | '/_authenticated/conferencia'
     | '/_authenticated/investimentos'
     | '/_authenticated/lancamentos'
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/analisar-fatura': {
+      id: '/_authenticated/analisar-fatura'
+      path: '/analisar-fatura'
+      fullPath: '/analisar-fatura'
+      preLoaderRoute: typeof AuthenticatedAnalisarFaturaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/conferencia': {
       id: '/_authenticated/conferencia'
@@ -229,6 +249,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAnalisarFaturaRoute: typeof AuthenticatedAnalisarFaturaRoute
   AuthenticatedConferenciaRoute: typeof AuthenticatedConferenciaRoute
   AuthenticatedInvestimentosRoute: typeof AuthenticatedInvestimentosRoute
   AuthenticatedLancamentosRoute: typeof AuthenticatedLancamentosRoute
@@ -238,6 +259,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAnalisarFaturaRoute: AuthenticatedAnalisarFaturaRoute,
   AuthenticatedConferenciaRoute: AuthenticatedConferenciaRoute,
   AuthenticatedInvestimentosRoute: AuthenticatedInvestimentosRoute,
   AuthenticatedLancamentosRoute: AuthenticatedLancamentosRoute,
