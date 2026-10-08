@@ -47,7 +47,7 @@ export const getTransactionWorkspace = createServerFn({ method: "POST" })
     const toMonth = toDate.getUTCMonth() + 1;
     const { data: rows, error: rowError } = await supabase
       .from("month_check_rows")
-      .select("id, year, month, transaction_date, descricao, tipo, valor, quitado, expense_class, category_id, position")
+      .select("id, year, month, transaction_date, descricao, tipo, valor, quitado, expense_class, category_id, position, invoice_installment_current, invoice_installment_total")
       .eq("user_id", userId)
       .or(`and(year.eq.${fromYear},month.gte.${fromMonth}),and(year.gt.${fromYear},year.lt.${toYear}),and(year.eq.${toYear},month.lte.${toMonth})`)
       .order("year", { ascending: false })

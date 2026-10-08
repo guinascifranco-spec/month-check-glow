@@ -47,6 +47,7 @@ type Transaction = {
   id: string; year: number; month: number; transaction_date: string | null; descricao: string;
   tipo: "entrada" | "saida"; valor: number; quitado: boolean; expense_class: "fixo" | "variavel";
   category_id: string | null; position: number;
+  invoice_installment_current?: number | null; invoice_installment_total?: number | null;
 };
 type FormState = { id?: string; date: string; description: string; type: "entrada" | "saida"; value: string; categoryId: string; expenseClass: "fixo" | "variavel"; settled: boolean };
 
@@ -350,6 +351,7 @@ function TransactionRow({ row, category, onEdit, onDelete }: { row: Transaction;
         <div className="w-12 shrink-0 text-xs font-medium text-muted-foreground bg-muted/20 rounded p-1 text-center">{formattedDate}</div>
         <div className="min-w-0">
           <div className={`truncate font-semibold text-sm sm:text-base ${row.quitado ? "line-through" : ""}`}>{row.descricao || "Sem descrição"}</div>
+          {row.invoice_installment_current && row.invoice_installment_total && <p className="mt-1 text-xs text-muted-foreground">Parcela {row.invoice_installment_current}/{row.invoice_installment_total}</p>}
           <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground mt-0.5">
             {row.tipo === "saida" && <span className="bg-muted/30 px-1.5 py-0.5 rounded">{category ?? "Sem categoria"}</span>}
             {row.tipo === "saida" && row.expense_class && <span className="opacity-70">{row.expense_class === "fixo" ? "Fixo" : "Variável"}</span>}
