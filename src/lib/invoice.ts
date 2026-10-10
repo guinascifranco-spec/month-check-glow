@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ownPortion } from "./personal-finance";
+import { validPersonalPortion } from "./personal-finance";
 
 export const MAX_INVOICE_SIZE = 20 * 1024 * 1024;
 export const invoiceSchema = z.object({
@@ -23,7 +23,7 @@ export const reviewedRowSchema = z.object({
   responsibility: z.enum(["own", "shared", "bia", "reimbursable"]),
   personalValue: z.number().finite().min(0).refine(v => Math.abs(v * 100 - Math.round(v * 100)) < 0.00001),
 }).refine(r => (r.current === null && r.total === null) || (r.current !== null && r.total !== null && r.current <= r.total), "Parcelas inválidas")
-  .refine(r => ownPortion(r.value, r.responsibility, r.personalValue) === r.personalValue, "Revise a classificação e minha parte");
+  .refine(r => validPersonalPortion(r.value, r.responsibility, r.personalValue), "Revise a classificação e minha parte");
 export const importSchema = z.object({ source: z.string().regex(/^[a-f0-9]{64}$/), card: z.string().max(24).nullable(), rows: z.array(reviewedRowSchema).min(1).max(500), confirmed: z.boolean(), acknowledgeDuplicates: z.boolean() }).refine(v => new Set(v.rows.map(r => r.line)).size === v.rows.length, "Linhas repetidas");
 export type ImportInput = z.infer<typeof importSchema>;
 export type Duplicate = { line: number; exact: boolean; description: string; date: string; value: number; reason: string };

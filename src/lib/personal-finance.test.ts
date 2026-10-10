@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { personalContribution, ownPortion, responsibilityTotals } from "./personal-finance";
+import { personalContribution, ownPortion, responsibilityTotals, validPersonalPortion } from "./personal-finance";
 import { invoiceTotals, reviewedRowSchema } from "./invoice";
 
 describe("Invoice responsibility", () => {
@@ -32,5 +32,9 @@ describe("Invoice responsibility", () => {
     expect(reviewedRowSchema.safeParse(row).success).toBe(false);
     expect(reviewedRowSchema.safeParse({ ...row, personalValue: 150.001 }).success).toBe(false);
     expect(reviewedRowSchema.safeParse({ ...row, personalValue: 150 }).success).toBe(true);
+    expect(validPersonalPortion(400, "shared", 150)).toBe(true);
+    expect(validPersonalPortion(400, "shared", 150.001)).toBe(false);
+    expect(validPersonalPortion(400, "own", 399)).toBe(false);
+    expect(validPersonalPortion(400, "bia", 1)).toBe(false);
   });
 });

@@ -27,6 +27,12 @@ export function ownPortion(value: number | null, responsibility: Responsibility,
   return shared !== null && shared >= 0 && shared <= value ? shared : null;
 }
 
+export function validPersonalPortion(value: number | null, responsibility: Responsibility, personalValue: number | null): boolean {
+  if (value === null || personalValue === null) return false;
+  const isCentAmount = (amount: number) => Number.isFinite(amount) && Math.abs(amount * 100 - Math.round(amount * 100)) < 0.00001;
+  return isCentAmount(value) && isCentAmount(personalValue) && ownPortion(value, responsibility, personalValue) === personalValue;
+}
+
 export function responsibilityTotals(rows: { value: number | null; type: string | null; responsibility: Responsibility; personalValue: number | null }[]) {
   let personal = 0; let bia = 0; let reimbursable = 0;
   let known = true;
