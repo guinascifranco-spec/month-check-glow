@@ -346,6 +346,9 @@ export type Database = {
           invoice_installment_current: number | null
           invoice_installment_total: number | null
           invoice_line: number | null
+          invoice_payment: boolean
+          invoice_personal_value: number | null
+          invoice_responsibility: string | null
           invoice_source: string | null
           month: number
           position: number
@@ -367,6 +370,9 @@ export type Database = {
           invoice_installment_current?: number | null
           invoice_installment_total?: number | null
           invoice_line?: number | null
+          invoice_payment?: boolean
+          invoice_personal_value?: number | null
+          invoice_responsibility?: string | null
           invoice_source?: string | null
           month: number
           position?: number
@@ -388,6 +394,9 @@ export type Database = {
           invoice_installment_current?: number | null
           invoice_installment_total?: number | null
           invoice_line?: number | null
+          invoice_payment?: boolean
+          invoice_personal_value?: number | null
+          invoice_responsibility?: string | null
           invoice_source?: string | null
           month?: number
           position?: number
