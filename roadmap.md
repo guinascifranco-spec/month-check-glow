@@ -2,6 +2,11 @@
 
 # Analisar fatura
 
+- [ ] Persistir responsabilidade e parte pessoal sem mudar valores integrais
+- [ ] Revisão, resumo e edição posterior das quatro classificações
+- [ ] Aplicar contribuição pessoal em indicadores e estornos, excluir pagamentos identificados
+- [ ] Validar importação, edição, conciliação e regressões com dados sintéticos
+
 - [x] Análise autenticada de PDF/imagem com resposta estruturada e cancelamento
 - [x] Prévia editável, conferência de centavos e confirmação obrigatória
 - [x] Importação atômica, metadados de parcelas e prevenção de duplicidade

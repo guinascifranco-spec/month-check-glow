@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { personalContribution, type Responsibility } from "./personal-finance";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const DEFAULT_CATEGORIES = [
@@ -47,7 +48,7 @@ export const getTransactionWorkspace = createServerFn({ method: "POST" })
     const toMonth = toDate.getUTCMonth() + 1;
     const { data: rows, error: rowError } = await supabase
       .from("month_check_rows")
-      .select("id, year, month, transaction_date, descricao, tipo, valor, quitado, expense_class, category_id, position, invoice_installment_current, invoice_installment_total")
+      .select("id, year, month, transaction_date, descricao, tipo, valor, quitado, expense_class, category_id, position, invoice_installment_current, invoice_installment_total, invoice_source, invoice_responsibility, invoice_personal_value, invoice_payment")
       .eq("user_id", userId)
       .or(`and(year.eq.${fromYear},month.gte.${fromMonth}),and(year.gt.${fromYear},year.lt.${toYear}),and(year.eq.${toYear},month.lte.${toMonth})`)
       .order("year", { ascending: false })
@@ -76,14 +77,15 @@ export const getMonthlyCategorySpending = createServerFn({ method: "POST" })
   }).parse(input))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase.from("month_check_rows")
-      .select("category_id, valor")
-      .eq("user_id", context.userId).eq("year", data.year).eq("month", data.month).eq("tipo", "saida");
+      .select("category_id, valor, tipo, invoice_responsibility, invoice_personal_value, invoice_payment")
+      .eq("user_id", context.userId).eq("year", data.year).eq("month", data.month);
     if (error) throw new Error(error.message);
     const amounts: Record<string, number> = {};
     let uncategorized = 0;
     for (const row of rows ?? []) {
-      if (!row.category_id) { uncategorized += Number(row.valor || 0); continue; }
-      amounts[row.category_id] = (amounts[row.category_id] ?? 0) + Number(row.valor || 0);
+      const amount = personalContribution(row).expense;
+      if (!row.category_id) { uncategorized += amount; continue; }
+      amounts[row.category_id] = (amounts[row.category_id] ?? 0) + amount;
     }
     return { amounts, uncategorized };
   });
@@ -103,7 +105,7 @@ export const updateCategoryBudget = createServerFn({ method: "POST" })
 
 export const createTransaction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { date: string; description: string; type: "entrada" | "saida"; value: number; categoryId?: string | null; expenseClass: "fixo" | "variavel"; settled: boolean }) =>
+  .inputValidator((input: { date: string; description: string; type: "entrada" | "saida"; value: number; categoryId?: string | null; expenseClass: "fixo" | "variavel"; settled: boolean; invoicePayment?: boolean }) =>
     z.object({
       date: dateSchema,
       description: z.string().trim().min(1).max(160),
@@ -112,6 +114,7 @@ export const createTransaction = createServerFn({ method: "POST" })
       categoryId: idSchema.nullish(),
       expenseClass: z.enum(["fixo", "variavel"]),
       settled: z.boolean(),
+      invoicePayment: z.boolean().optional(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -131,6 +134,7 @@ export const createTransaction = createServerFn({ method: "POST" })
       category_id: data.type === "saida" ? (data.categoryId ?? null) : null,
       expense_class: data.type === "saida" ? data.expenseClass : "variavel",
       quitado: data.settled,
+      invoice_payment: data.invoicePayment ?? false,
       position: (last?.position ?? -1) + 1,
     }).select("*").single();
     if (error) throw new Error(error.message);
@@ -139,7 +143,7 @@ export const createTransaction = createServerFn({ method: "POST" })
 
 export const updateTransaction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; date: string; description: string; type: "entrada" | "saida"; value: number; categoryId?: string | null; expenseClass: "fixo" | "variavel"; settled: boolean; installmentCurrent?: number | null; installmentTotal?: number | null }) =>
+  .inputValidator((input: { id: string; date: string; description: string; type: "entrada" | "saida"; value: number; categoryId?: string | null; expenseClass: "fixo" | "variavel"; settled: boolean; installmentCurrent?: number | null; installmentTotal?: number | null; responsibility?: Responsibility | null; personalValue?: number | null; invoicePayment?: boolean }) =>
     z.object({
       id: idSchema,
       date: dateSchema,
@@ -149,6 +153,9 @@ export const updateTransaction = createServerFn({ method: "POST" })
       categoryId: idSchema.nullish(),
       expenseClass: z.enum(["fixo", "variavel"]),
       settled: z.boolean(),
+      responsibility: z.enum(["own", "shared", "bia", "reimbursable"]).nullish(),
+      personalValue: z.number().finite().nonnegative().nullish(),
+      invoicePayment: z.boolean().optional(),
       installmentCurrent: z.number().int().min(1).max(360).nullish(),
       installmentTotal: z.number().int().min(1).max(360).nullish(),
     }).refine(v => (v.installmentCurrent == null && v.installmentTotal == null) || (v.installmentCurrent != null && v.installmentTotal != null && v.installmentCurrent <= v.installmentTotal), "Parcelas inválidas").parse(input),
@@ -162,9 +169,11 @@ export const updateTransaction = createServerFn({ method: "POST" })
       descricao: data.description,
       tipo: data.type,
       valor: data.value,
-      category_id: data.type === "saida" ? (data.categoryId ?? null) : null,
+      category_id: (data.type === "saida" || data.responsibility != null) ? (data.categoryId ?? null) : null,
       expense_class: data.type === "saida" ? data.expenseClass : "variavel",
       quitado: data.settled,
+      ...(data.responsibility !== undefined ? { invoice_responsibility: data.responsibility, invoice_personal_value: data.personalValue ?? null } : {}),
+      ...(data.invoicePayment !== undefined ? { invoice_payment: data.invoicePayment } : {}),
       ...(data.installmentCurrent !== undefined ? { invoice_installment_current: data.installmentCurrent, invoice_installment_total: data.installmentTotal ?? null } : {}),
     }).eq("id", data.id).eq("user_id", context.userId);
     if (error) throw new Error(error.message);

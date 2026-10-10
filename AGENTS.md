@@ -6,3 +6,4 @@
 - Invoice analysis uses an authenticated streaming server route with server-only Lovable AI helpers and memory-only documents; this prevents credentials and documents from entering client bundles or public storage.
 - Invoice imports use owner-scoped atomic RPC with original-file hash and original line index, plus optional metadata on existing transactions; this preserves reviewed installments without creating future schedules or duplicating confirmed imports.
 - Persist terminal AI access blocks server-side and require explicit restoration before fresh analysis; this prevents repeated billed requests during account or provider denials.
+- Keep invoice integral values for reconciliation and deduplication; use personalContribution for all consumption metrics, classifying invoice credits as expense offsets and explicit invoice payments as neutral, while null responsibility preserves legacy behavior.

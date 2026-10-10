@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { personalContribution } from "./personal-finance";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type MonthKey = `${number}-${string}`;
@@ -36,7 +37,7 @@ export const getFutureProjection = createServerFn({ method: "POST" })
       await Promise.all([
         supabase
           .from("month_check_rows")
-          .select("year, month, descricao, tipo, valor, expense_class")
+          .select("year, month, descricao, tipo, valor, expense_class, invoice_responsibility, invoice_personal_value, invoice_payment")
           .eq("user_id", userId)
           .order("year", { ascending: true })
           .order("month", { ascending: true }),
@@ -57,19 +58,21 @@ export const getFutureProjection = createServerFn({ method: "POST" })
     const latestFixed = new Map<string, { order: number; valor: number }>();
 
     for (const row of rows ?? []) {
-      const value = Number(row.valor) || 0;
+      const contribution = personalContribution(row);
+      if (!contribution.active) continue;
+      const value = contribution.income + Math.abs(contribution.expense);
       const key = monthKey(row.year, row.month);
       const current = byMonth.get(key) ?? { renda: 0, variaveis: 0, hasValue: false };
       if (value > 0) current.hasValue = true;
-      if (row.tipo === "entrada") current.renda += value;
-      if (row.tipo === "saida" && row.expense_class !== "fixo") current.variaveis += value;
+      current.renda += contribution.income;
+      if (row.expense_class !== "fixo") current.variaveis += contribution.expense;
       byMonth.set(key, current);
 
-      if (row.tipo === "saida" && row.expense_class === "fixo") {
+      if (contribution.expense !== 0 && row.expense_class === "fixo") {
         const normalized = row.descricao.trim().toLocaleLowerCase("pt-BR") || `sem-nome-${key}`;
         const order = row.year * 12 + row.month;
         const previous = latestFixed.get(normalized);
-        if (!previous || order >= previous.order) latestFixed.set(normalized, { order, valor: value });
+        if (!previous || order >= previous.order) latestFixed.set(normalized, { order, valor: contribution.expense });
       }
     }
 

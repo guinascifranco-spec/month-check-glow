@@ -4,10 +4,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trash2 } from "lucide-react";
 import type { Invoice } from "@/lib/invoice";
+import { InvoiceResponsibility } from "./invoice-responsibility";
+import type { Responsibility } from "@/lib/personal-finance";
 
-export type ReviewRow = { line: number; selected: boolean; date: string; description: string; value: string; type: "entrada" | "saida" | ""; categoryId: string; current: string; total: string; confidence: "alta" | "media" | "baixa" };
+export type ReviewRow = { line: number; selected: boolean; date: string; description: string; value: string; type: "entrada" | "saida" | ""; categoryId: string; current: string; total: string; confidence: "alta" | "media" | "baixa"; responsibility: Responsibility; ownValue: string };
 export function reviewRows(invoice: Invoice): ReviewRow[] {
-  return invoice.transactions.map((t, line) => ({ line, selected: true, date: t.date ?? "", description: t.description ?? "", value: t.value === null ? "" : t.value.toFixed(2).replace(".", ","), type: t.type ?? "", categoryId: t.categoryId ?? "", current: t.current === null ? "" : String(t.current), total: t.total === null ? "" : String(t.total), confidence: t.confidence }));
+    return invoice.transactions.map((t, line) => ({ line, selected: true, date: t.date ?? "", description: t.description ?? "", value: t.value === null ? "" : t.value.toFixed(2).replace(".", ","), type: t.type ?? "", categoryId: t.categoryId ?? "", current: t.current === null ? "" : String(t.current), total: t.total === null ? "" : String(t.total), confidence: t.confidence, responsibility: "own", ownValue: "" }));
 }
 export function InvoiceReview({ rows, categories, onChange, disabled }: { rows: ReviewRow[]; categories: { id: string; name: string }[]; onChange: (rows: ReviewRow[]) => void; disabled: boolean }) {
   const update = (line: number, changes: Partial<ReviewRow>) => onChange(rows.map(r => r.line === line ? { ...r, ...changes } : r));
@@ -22,6 +24,7 @@ export function InvoiceReview({ rows, categories, onChange, disabled }: { rows: 
       <div className="min-w-0"><span className="text-xs text-muted-foreground xl:sr-only">Parcela atual / total</span><div className="flex items-center gap-1"><Input aria-label={`Parcela atual ${index + 1}`} inputMode="numeric" value={r.current} onChange={e => update(r.line, { current: e.target.value })} /><span>/</span><Input aria-label={`Total de parcelas ${index + 1}`} inputMode="numeric" value={r.total} onChange={e => update(r.line, { total: e.target.value })} /></div></div>
       <div className="flex min-h-11 items-center gap-1 text-sm text-muted-foreground"><span className="xl:hidden">Confiança: </span>{({ alta: "Alta", media: "Média", baixa: "Baixa" })[r.confidence]}</div>
       <Button variant="ghost" size="icon" aria-label={`Remover lançamento ${index + 1}`} onClick={() => onChange(rows.filter(row => row.line !== r.line))}><Trash2 className="h-4 w-4" /></Button>
+      <div className="col-span-2 xl:col-start-3 xl:col-span-3"><InvoiceResponsibility label={`Responsabilidade ${index + 1}`} value={r.responsibility} ownValue={r.ownValue} onChange={responsibility => update(r.line, { responsibility })} onOwnChange={ownValue => update(r.line, { ownValue })} disabled={disabled} /></div>
     </fieldset>)}
   </section>;
 }

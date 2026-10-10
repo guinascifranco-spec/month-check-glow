@@ -8,6 +8,13 @@
       "when": 1791415826686,
       "tag": "0000_invoice_import_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791635431867,
+      "tag": "0001_invoice_personal_responsibility",
+      "breakpoints": true
     }
   ]
 }

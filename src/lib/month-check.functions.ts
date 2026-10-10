@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { personalContribution } from "./personal-finance";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const DEFAULT_TEMPLATE: Array<{ descricao: string; tipo: "entrada" | "saida" }> = [
@@ -185,7 +186,7 @@ export const getYearTotals = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: rows, error } = await supabase
       .from("month_check_rows")
-      .select("month, tipo, valor")
+      .select("month, tipo, valor, invoice_responsibility, invoice_personal_value, invoice_payment")
       .eq("user_id", userId)
       .eq("year", data.year);
     if (error) throw new Error(error.message);
@@ -198,9 +199,9 @@ export const getYearTotals = createServerFn({ method: "POST" })
     for (const r of rows ?? []) {
       const idx = (r.month as number) - 1;
       if (idx < 0 || idx > 11) continue;
-      const v = Number(r.valor) || 0;
-      if (r.tipo === "entrada") totals[idx].entradas += v;
-      else totals[idx].saidas += v;
+      const contribution = personalContribution(r);
+      totals[idx].entradas += contribution.income;
+      totals[idx].saidas += contribution.expense;
     }
     return totals;
   });
