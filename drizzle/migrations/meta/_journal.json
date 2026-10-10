@@ -15,6 +15,13 @@
       "when": 1791635431867,
       "tag": "0001_invoice_personal_responsibility",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791637947000,
+      "tag": "0002_require_invoice_responsibility",
+      "breakpoints": true
     }
   ]
 }

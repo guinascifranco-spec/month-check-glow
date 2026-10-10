@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { personalContribution, type Responsibility } from "./personal-finance";
+import { personalContribution, validPersonalPortion, type Responsibility } from "./personal-finance";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const DEFAULT_CATEGORIES = [
@@ -158,10 +158,23 @@ export const updateTransaction = createServerFn({ method: "POST" })
       invoicePayment: z.boolean().optional(),
       installmentCurrent: z.number().int().min(1).max(360).nullish(),
       installmentTotal: z.number().int().min(1).max(360).nullish(),
-    }).refine(v => (v.installmentCurrent == null && v.installmentTotal == null) || (v.installmentCurrent != null && v.installmentTotal != null && v.installmentCurrent <= v.installmentTotal), "Parcelas inválidas").parse(input),
+    })
+      .refine(v => (v.installmentCurrent == null && v.installmentTotal == null) || (v.installmentCurrent != null && v.installmentTotal != null && v.installmentCurrent <= v.installmentTotal), "Parcelas inválidas")
+      .refine(v => v.responsibility == null ? v.personalValue == null : validPersonalPortion(v.value, v.responsibility, v.personalValue ?? null), "Revise a classificação e minha parte")
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
     const [year, month] = data.date.split("-").map(Number);
+    if (data.responsibility != null) {
+      const { data: existing, error: lookupError } = await context.supabase
+        .from("month_check_rows")
+        .select("invoice_source")
+        .eq("id", data.id)
+        .eq("user_id", context.userId)
+        .single();
+      if (lookupError) throw new Error(lookupError.message);
+      if (!existing.invoice_source) throw new Error("A classificação de responsabilidade só pode ser editada em lançamentos importados de fatura.");
+    }
     const { error } = await context.supabase.from("month_check_rows").update({
       year,
       month,
