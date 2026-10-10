@@ -107,7 +107,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR">
-      <head><HeadContent /></head>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `(()=>{try{const saved=localStorage.getItem("month-check-theme");const dark=saved===null?matchMedia("(prefers-color-scheme: dark)").matches:saved==="dark";document.documentElement.classList.toggle("dark",dark);document.documentElement.style.colorScheme=dark?"dark":"light"}catch{}})()` }} />
+        <HeadContent />
+      </head>
       <body>
         {children}
         <Scripts />

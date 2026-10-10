@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const tabs = [
   { to: "/conferencia", label: "Conferência" },
@@ -13,7 +14,7 @@ const tabs = [
 export function PageTabs() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <nav className="hidden w-full border-b border-border lg:inline-flex">
+    <nav className="hidden w-full items-center border-b border-border lg:flex">
       {tabs.map((t) => {
         const active = pathname === t.to;
         return (
@@ -31,6 +32,9 @@ export function PageTabs() {
           </Link>
         );
       })}
+      <div className="ml-auto pl-3">
+        <ThemeToggle />
+      </div>
     </nav>
   );
 }

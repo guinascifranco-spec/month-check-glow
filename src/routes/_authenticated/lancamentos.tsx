@@ -284,7 +284,7 @@ function TransactionsPage() {
                       <Pie data={categoryChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={2}>
                         {categoryChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                       </Pie>
-                      <Tooltip formatter={(value: number) => brl.format(value)} contentStyle={{ borderRadius: '8px', border: 'none', backgroundColor: 'hsl(var(--background))', color: 'hsl(var(--foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                      <Tooltip formatter={(value: number) => brl.format(value)} contentStyle={{ borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-popover)', color: 'var(--color-popover-foreground)', boxShadow: 'none' }} />
                       <Legend verticalAlign="middle" align="right" layout="vertical" wrapperStyle={{ fontSize: '12px' }} />
                     </PieChart>
                   </ResponsiveContainer>
@@ -299,10 +299,10 @@ function TransactionsPage() {
               <div className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.3)" />
-                    <XAxis dataKey="label" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-                    <YAxis tickFormatter={(val) => `R$${val > 1000 ? (val/1000).toFixed(0)+'k' : val}`} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-                    <Tooltip cursor={{ fill: 'hsl(var(--muted)/0.3)' }} formatter={(value: number) => brl.format(value)} contentStyle={{ borderRadius: '8px', border: 'none', backgroundColor: 'hsl(var(--background))', color: 'hsl(var(--foreground))', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+                    <XAxis dataKey="label" tick={{ fontSize: 12, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
+                    <YAxis tickFormatter={(val) => `R$${val > 1000 ? (val/1000).toFixed(0)+'k' : val}`} tick={{ fontSize: 12, fill: "var(--color-muted-foreground)" }} tickLine={false} axisLine={false} />
+                    <Tooltip cursor={{ fill: "var(--color-muted)" }} formatter={(value: number) => brl.format(value)} contentStyle={{ borderRadius: '8px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-popover)', color: 'var(--color-popover-foreground)', boxShadow: 'none' }} />
                     <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
                     <Bar dataKey="Entradas" fill="var(--color-primary)" radius={[4, 4, 0, 0]} maxBarSize={40} />
                     <Bar dataKey="Saídas" fill="var(--color-danger)" radius={[4, 4, 0, 0]} maxBarSize={40} />

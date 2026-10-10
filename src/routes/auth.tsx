@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Logo } from "@/components/logo";
 import { InstallPWAButton } from "@/components/install-pwa-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -80,7 +81,8 @@ function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+    <div className="relative flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      <div className="absolute right-4 top-4"><ThemeToggle /></div>
       <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 sm:p-8">
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo height={64} className="mb-3" />
