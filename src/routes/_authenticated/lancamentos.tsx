@@ -27,6 +27,9 @@ import {
   deleteCategoryRule,
   applyCategoryRules,
 } from "@/lib/transactions.functions";
+import { personalContribution, ownPortion, RESPONSIBILITIES, type Responsibility } from "@/lib/personal-finance";
+import { parseMoney } from "@/lib/invoice";
+import { InvoiceResponsibility } from "@/components/invoice-responsibility";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
 
 export const Route = createFileRoute("/_authenticated/lancamentos")({
@@ -47,9 +50,10 @@ type Transaction = {
   id: string; year: number; month: number; transaction_date: string | null; descricao: string;
   tipo: "entrada" | "saida"; valor: number; quitado: boolean; expense_class: "fixo" | "variavel";
   category_id: string | null; position: number;
+  invoice_source?: string | null; invoice_responsibility?: Responsibility | null; invoice_personal_value?: number | null; invoice_payment?: boolean;
   invoice_installment_current?: number | null; invoice_installment_total?: number | null;
 };
-type FormState = { id?: string; date: string; description: string; type: "entrada" | "saida"; value: string; categoryId: string; expenseClass: "fixo" | "variavel"; settled: boolean; installmentCurrent?: string; installmentTotal?: string };
+type FormState = { id?: string; date: string; description: string; type: "entrada" | "saida"; value: string; categoryId: string; expenseClass: "fixo" | "variavel"; settled: boolean; installmentCurrent?: string; installmentTotal?: string; invoiceSource?: string | null; responsibility?: Responsibility | null; ownValue?: string; invoicePayment?: boolean };
 
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -132,8 +136,9 @@ function TransactionsPage() {
   }), [data, search, typeFilter, categoryFilter, settledFilter]);
 
   const totals = useMemo(() => rows.reduce((sum, row) => {
-    if (row.tipo === "entrada") sum.income += Number(row.valor) || 0;
-    else sum.expense += Number(row.valor) || 0;
+    const contribution = personalContribution(row);
+    sum.income += contribution.income;
+    sum.expense += contribution.expense;
     return sum;
   }, { income: 0, expense: 0 }), [rows]);
 
@@ -143,7 +148,7 @@ function TransactionsPage() {
     for (const row of rows) {
       const g = `${row.year}-${String(row.month).padStart(2, "0")}`;
       if (!map.has(g)) map.set(g, []);
-      map.get(g)!.push(row);
+      map.get(g)?.push(row);
     }
     return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0])); // newest first
   }, [rows]);
@@ -151,12 +156,13 @@ function TransactionsPage() {
   const categoryChartData = useMemo(() => {
     const map = new Map<string, number>();
     for (const row of rows) {
-      if (row.tipo === "saida" && row.valor > 0) {
+      const expense = personalContribution(row).expense;
+      if (expense !== 0) {
         const catName = row.category_id ? (categoryNames.get(row.category_id) ?? "Desconhecida") : "Sem categoria";
-        map.set(catName, (map.get(catName) || 0) + Number(row.valor));
+        map.set(catName, (map.get(catName) || 0) + expense);
       }
     }
-    return Array.from(map.entries()).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    return Array.from(map.entries()).map(([name, value]) => ({ name, value })).filter(item => item.value > 0).sort((a, b) => b.value - a.value);
   }, [rows, categoryNames]);
 
   const monthlyChartData = useMemo(() => {
@@ -165,8 +171,9 @@ function TransactionsPage() {
       let income = 0;
       let expense = 0;
       for (const r of groupRows) {
-        if (r.tipo === "entrada") income += Number(r.valor) || 0;
-        else expense += Number(r.valor) || 0;
+        const contribution = personalContribution(r);
+        income += contribution.income;
+        expense += contribution.expense;
       }
       const [y, m] = key.split("-");
       const label = `${MONTHS[parseInt(m, 10) - 1].slice(0,3)}/${y.slice(2)}`;
@@ -179,7 +186,7 @@ function TransactionsPage() {
   // Suggestions
   const suggestions = useMemo(() => {
     return rows
-      .filter((r) => r.tipo === "saida" && !r.category_id)
+      .filter((r) => personalContribution(r).expense !== 0 && !r.category_id)
       .map((r) => ({ row: r, suggestedCategoryId: getSuggestedCategory(r.descricao, rules) }))
       .filter((s) => s.suggestedCategoryId !== null) as { row: Transaction; suggestedCategoryId: string }[];
   }, [rows, rules]);
@@ -190,12 +197,13 @@ function TransactionsPage() {
     queryClient.invalidateQueries({ queryKey: ["month-rows"] });
     queryClient.invalidateQueries({ queryKey: ["year-totals"] });
     queryClient.invalidateQueries({ queryKey: ["future-projection"] });
+    queryClient.invalidateQueries({ queryKey: ["shared-metrics"] });
   };
 
   const saveMutation = useMutation({ mutationFn: async () => {
     const value = Number(form.value.replace(",", ".")) || 0;
-    const payload = { date: form.date, description: form.description, type: form.type, value, categoryId: form.categoryId || null, expenseClass: form.expenseClass, settled: form.settled };
-    if (form.id) return updateFn({ data: { id: form.id, ...payload, ...(form.installmentCurrent !== undefined ? { installmentCurrent: form.installmentCurrent ? Number(form.installmentCurrent) : null, installmentTotal: form.installmentTotal ? Number(form.installmentTotal) : null } : {}) } });
+    const payload = { date: form.date, description: form.description, type: form.type, value, categoryId: form.categoryId || null, expenseClass: form.expenseClass, settled: form.settled, invoicePayment: form.type === "saida" && !form.invoiceSource ? (form.invoicePayment ?? false) : false };
+    if (form.id) return updateFn({ data: { id: form.id, ...payload, ...(form.responsibility ? { responsibility: form.responsibility, personalValue: ownPortion(Number(form.value.replace(",", ".")) || 0, form.responsibility, parseMoney(form.ownValue ?? "")) } : {}), ...(form.installmentCurrent !== undefined ? { installmentCurrent: form.installmentCurrent ? Number(form.installmentCurrent) : null, installmentTotal: form.installmentTotal ? Number(form.installmentTotal) : null } : {}) } });
     return createFn({ data: payload });
   }, onSuccess: () => { refresh(); setFormOpen(false); } });
   
@@ -207,7 +215,7 @@ function TransactionsPage() {
   });
 
   function edit(row: Transaction) {
-    setForm({ id: row.id, date: row.transaction_date ?? `${row.year}-${String(row.month).padStart(2, "0")}-01`, description: row.descricao, type: row.tipo, value: String(row.valor || ""), categoryId: row.category_id ?? "", expenseClass: row.expense_class, settled: row.quitado, installmentCurrent: row.invoice_installment_current == null ? undefined : String(row.invoice_installment_current), installmentTotal: row.invoice_installment_total == null ? undefined : String(row.invoice_installment_total) });
+    setForm({ id: row.id, invoiceSource: row.invoice_source, responsibility: row.invoice_responsibility, ownValue: row.invoice_personal_value == null ? "" : String(row.invoice_personal_value), invoicePayment: row.invoice_payment, date: row.transaction_date ?? `${row.year}-${String(row.month).padStart(2, "0")}-01`, description: row.descricao, type: row.tipo, value: String(row.valor || ""), categoryId: row.category_id ?? "", expenseClass: row.expense_class, settled: row.quitado, installmentCurrent: row.invoice_installment_current == null ? undefined : String(row.invoice_installment_current), installmentTotal: row.invoice_installment_total == null ? undefined : String(row.invoice_installment_total) });
     setFormOpen(true);
   }
 
@@ -351,6 +359,8 @@ function TransactionRow({ row, category, onEdit, onDelete }: { row: Transaction;
         <div className="w-12 shrink-0 text-xs font-medium text-muted-foreground bg-muted/20 rounded p-1 text-center">{formattedDate}</div>
         <div className="min-w-0">
           <div className={`truncate font-semibold text-sm sm:text-base ${row.quitado ? "line-through" : ""}`}>{row.descricao || "Sem descrição"}</div>
+          {row.invoice_responsibility && <p className="mt-1 text-xs text-muted-foreground">{RESPONSIBILITIES[row.invoice_responsibility]} · Integral: {brl.format(row.valor)} · Pessoal: {brl.format(row.invoice_personal_value ?? 0)}{row.tipo === "entrada" ? " · Estorno" : ""}</p>}
+          {row.invoice_payment && <p className="mt-1 text-xs text-muted-foreground">Pagamento de fatura · Sem efeito no consumo pessoal</p>}
           {row.invoice_installment_current && row.invoice_installment_total && <p className="mt-1 text-xs text-muted-foreground">Parcela {row.invoice_installment_current}/{row.invoice_installment_total}</p>}
           <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground mt-0.5">
             {row.tipo === "saida" && <span className="bg-muted/30 px-1.5 py-0.5 rounded">{category ?? "Sem categoria"}</span>}
@@ -373,8 +383,8 @@ function TransactionRow({ row, category, onEdit, onDelete }: { row: Transaction;
 }
 
 function TransactionDialog({ open, onOpenChange, form, setForm, categories, saving, onSave }: { open: boolean; onOpenChange: (value: boolean) => void; form: FormState; setForm: React.Dispatch<React.SetStateAction<FormState>>; categories: Category[]; saving: boolean; onSave: () => void }) {
-  const valid = form.date && form.description.trim(); // valor 0 is now allowed as 'sem valor'
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent><DialogHeader><DialogTitle>{form.id ? "Editar lançamento" : "Novo lançamento"}</DialogTitle></DialogHeader><div className="space-y-4 overflow-y-auto px-1"><div className="grid grid-cols-2 gap-3"><FilterField label="Data"><Input type="date" value={form.date} onChange={(event) => setForm((old) => ({ ...old, date: event.target.value }))}/></FilterField><FilterField label="Tipo"><select value={form.type} onChange={(event) => setForm((old) => ({ ...old, type: event.target.value as FormState["type"] }))} className="neu-inset min-h-11 w-full rounded-lg bg-transparent px-3"><option value="saida">Saída</option><option value="entrada">Entrada</option></select></FilterField></div><div><Label>Descrição</Label><Input className="mt-1" value={form.description} onChange={(event) => setForm((old) => ({ ...old, description: event.target.value }))} placeholder="Ex: Supermercado" /></div><div><Label>Valor (R$) <span className="text-muted-foreground font-normal">(Deixe vazio para "sem valor")</span></Label><Input className="mt-1" type="text" inputMode="decimal" value={form.value} onChange={(event) => setForm((old) => ({ ...old, value: event.target.value }))} placeholder="0,00" /></div>{form.installmentCurrent !== undefined && <div className="grid grid-cols-2 gap-3"><label><Label>Parcela atual</Label><Input aria-label="Parcela atual" inputMode="numeric" value={form.installmentCurrent} onChange={e => setForm(old => ({ ...old, installmentCurrent: e.target.value }))} /></label><label><Label>Total de parcelas</Label><Input aria-label="Total de parcelas" inputMode="numeric" value={form.installmentTotal} onChange={e => setForm(old => ({ ...old, installmentTotal: e.target.value }))} /></label></div>}{form.type === "saida" && <><div><Label>Categoria</Label><select value={form.categoryId} onChange={(event) => setForm((old) => ({ ...old, categoryId: event.target.value }))} className="neu-inset mt-1 min-h-11 w-full rounded-lg bg-transparent px-3"><option value="">Sem categoria</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div><div className="grid grid-cols-2 gap-2">{(["fixo", "variavel"] as const).map((value) => <Button key={value} type="button" variant="outline" className={`min-h-11 ${form.expenseClass === value ? "neu-inset text-secondary" : "neu-pressable"}`} onClick={() => setForm((old) => ({ ...old, expenseClass: value }))}>{value === "fixo" ? "Fixo" : "Variável"}</Button>)}</div></>}<label className="flex min-h-11 items-center gap-3"><input type="checkbox" checked={form.settled} onChange={(event) => setForm((old) => ({ ...old, settled: event.target.checked }))} className="h-5 w-5 accent-primary"/><span className="text-sm font-medium">Quitado</span></label></div><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button><Button disabled={!valid || saving} onClick={onSave}>{saving ? "Salvando..." : "Salvar"}</Button></DialogFooter></DialogContent></Dialog>;
+  const valid = form.date && form.description.trim() && (!form.responsibility || ownPortion(parseMoney(form.value), form.responsibility, parseMoney(form.ownValue ?? "")) !== null); // valor 0 is now allowed as 'sem valor'
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent><DialogHeader><DialogTitle>{form.id ? "Editar lançamento" : "Novo lançamento"}</DialogTitle></DialogHeader><div className="space-y-4 overflow-y-auto px-1"><div className="grid grid-cols-2 gap-3"><FilterField label="Data"><Input type="date" value={form.date} onChange={(event) => setForm((old) => ({ ...old, date: event.target.value }))}/></FilterField><FilterField label="Tipo"><select value={form.type} onChange={(event) => setForm((old) => ({ ...old, type: event.target.value as FormState["type"] }))} className="neu-inset min-h-11 w-full rounded-lg bg-transparent px-3"><option value="saida">Saída</option><option value="entrada">Entrada</option></select></FilterField></div><div><Label>Descrição</Label><Input className="mt-1" value={form.description} onChange={(event) => setForm((old) => ({ ...old, description: event.target.value }))} placeholder="Ex: Supermercado" /></div><div><Label>Valor (R$) <span className="text-muted-foreground font-normal">(Deixe vazio para "sem valor")</span></Label><Input className="mt-1" type="text" inputMode="decimal" value={form.value} onChange={(event) => setForm((old) => ({ ...old, value: event.target.value }))} placeholder="0,00" /></div>{form.invoiceSource && <InvoiceResponsibility value={form.responsibility ?? "own"} ownValue={form.ownValue ?? ""} onChange={responsibility => setForm(old => ({ ...old, responsibility }))} onOwnChange={ownValue => setForm(old => ({ ...old, responsibility: old.responsibility ?? "own", ownValue }))} />}{!form.invoiceSource && form.type === "saida" && <label className="flex min-h-11 items-center gap-3"><input type="checkbox" checked={form.invoicePayment ?? false} onChange={e => setForm(old => ({ ...old, invoicePayment: e.target.checked }))} /><span className="text-sm">Pagamento de fatura (não somar ao consumo)</span></label>}{form.installmentCurrent !== undefined && <div className="grid grid-cols-2 gap-3"><label><Label>Parcela atual</Label><Input aria-label="Parcela atual" inputMode="numeric" value={form.installmentCurrent} onChange={e => setForm(old => ({ ...old, installmentCurrent: e.target.value }))} /></label><label><Label>Total de parcelas</Label><Input aria-label="Total de parcelas" inputMode="numeric" value={form.installmentTotal} onChange={e => setForm(old => ({ ...old, installmentTotal: e.target.value }))} /></label></div>}{(form.type === "saida" || form.responsibility) && <><div><Label>Categoria</Label><select value={form.categoryId} onChange={(event) => setForm((old) => ({ ...old, categoryId: event.target.value }))} className="neu-inset mt-1 min-h-11 w-full rounded-lg bg-transparent px-3"><option value="">Sem categoria</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div><div className="grid grid-cols-2 gap-2">{(["fixo", "variavel"] as const).map((value) => <Button key={value} type="button" variant="outline" className={`min-h-11 ${form.expenseClass === value ? "neu-inset text-secondary" : "neu-pressable"}`} onClick={() => setForm((old) => ({ ...old, expenseClass: value }))}>{value === "fixo" ? "Fixo" : "Variável"}</Button>)}</div></>}<label className="flex min-h-11 items-center gap-3"><input type="checkbox" checked={form.settled} onChange={(event) => setForm((old) => ({ ...old, settled: event.target.checked }))} className="h-5 w-5 accent-primary"/><span className="text-sm font-medium">Quitado</span></label></div><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button><Button disabled={!valid || saving} onClick={onSave}>{saving ? "Salvando..." : "Salvar"}</Button></DialogFooter></DialogContent></Dialog>;
 }
 
 function CategoriesDialog({ open, onOpenChange, categories, onCreate, onRename, onDelete }: { open: boolean; onOpenChange: (value: boolean) => void; categories: Category[]; onCreate: (name: string, color: string) => Promise<void>; onRename: (id: string, name: string) => Promise<void>; onDelete: (id: string) => Promise<void> }) {
