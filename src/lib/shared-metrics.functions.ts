@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { personalContribution } from "./personal-finance";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
@@ -42,7 +43,7 @@ export const getMonthlyTotals = createServerFn({ method: "GET" })
 
     const { data, error } = await supabase
       .from("month_check_rows")
-      .select("year, month, tipo, valor")
+      .select("year, month, tipo, valor, invoice_responsibility, invoice_personal_value, invoice_payment")
       .eq("user_id", userId)
       .not("transaction_date", "is", null); // Apenas Lançamentos reais
 
@@ -50,7 +51,8 @@ export const getMonthlyTotals = createServerFn({ method: "GET" })
 
     const map = new Map<string, MonthlyTotal>();
     for (const r of data ?? []) {
-      const v = Number(r.valor) || 0;
+      const contribution = personalContribution(r);
+      const v = contribution.income + Math.abs(contribution.expense);
       if (v === 0) continue;
       const key = `${r.year}-${String(r.month).padStart(2, "0")}`;
       let cur = map.get(key);
@@ -58,8 +60,8 @@ export const getMonthlyTotals = createServerFn({ method: "GET" })
         cur = { year: r.year as number, month: r.month as number, entradas: 0, saidas: 0, saldo: 0 };
         map.set(key, cur);
       }
-      if (r.tipo === "entrada") cur.entradas += v;
-      else cur.saidas += v;
+      cur.entradas += contribution.income;
+      cur.saidas += contribution.expense;
     }
 
     return Array.from(map.values())
@@ -90,7 +92,7 @@ export const getMonthTotals = createServerFn({ method: "POST" })
 
     const { data: rows, error } = await supabase
       .from("month_check_rows")
-      .select("tipo, valor")
+      .select("tipo, valor, invoice_responsibility, invoice_personal_value, invoice_payment")
       .eq("user_id", userId)
       .not("transaction_date", "is", null)
       .gte("transaction_date", fromDate)
@@ -101,9 +103,10 @@ export const getMonthTotals = createServerFn({ method: "POST" })
     let entradas = 0;
     let saidas = 0;
     for (const r of rows ?? []) {
-      const v = Number(r.valor) || 0;
-      if (r.tipo === "entrada") entradas += v;
-      else saidas += v;
+      const contribution = personalContribution(r);
+      const v = contribution.income + Math.abs(contribution.expense);
+      entradas += contribution.income;
+      saidas += contribution.expense;
     }
 
     return { year: data.year, month: data.month, entradas, saidas, saldo: entradas - saidas };
@@ -124,7 +127,7 @@ export const getAccumulatedWithPatrimony = createServerFn({ method: "GET" })
     const [monthlyResult, aportesResult] = await Promise.all([
       supabase
         .from("month_check_rows")
-        .select("year, month, tipo, valor")
+        .select("year, month, tipo, valor, invoice_responsibility, invoice_personal_value, invoice_payment")
         .eq("user_id", userId)
         .not("transaction_date", "is", null),
       supabase
@@ -145,7 +148,8 @@ export const getAccumulatedWithPatrimony = createServerFn({ method: "GET" })
     // Agrupar por mês
     const map = new Map<string, MonthlyTotal>();
     for (const r of monthlyResult.data ?? []) {
-      const v = Number(r.valor) || 0;
+      const contribution = personalContribution(r);
+      const v = contribution.income + Math.abs(contribution.expense);
       if (v === 0) continue;
       const key = `${r.year}-${String(r.month).padStart(2, "0")}`;
       let cur = map.get(key);
@@ -153,8 +157,8 @@ export const getAccumulatedWithPatrimony = createServerFn({ method: "GET" })
         cur = { year: r.year as number, month: r.month as number, entradas: 0, saidas: 0, saldo: 0 };
         map.set(key, cur);
       }
-      if (r.tipo === "entrada") cur.entradas += v;
-      else cur.saidas += v;
+      cur.entradas += contribution.income;
+      cur.saidas += contribution.expense;
     }
 
     const sorted = Array.from(map.values())
@@ -194,7 +198,7 @@ export const getLast3MonthsAverages = createServerFn({ method: "POST" })
 
     const { data: rows, error } = await supabase
       .from("month_check_rows")
-      .select("year, month, tipo, valor, expense_class")
+      .select("year, month, tipo, valor, expense_class, invoice_responsibility, invoice_personal_value, invoice_payment")
       .eq("user_id", userId)
       .not("transaction_date", "is", null);
 
@@ -205,13 +209,14 @@ export const getLast3MonthsAverages = createServerFn({ method: "POST" })
     const byMonth = new Map<string, MonthBucket>();
 
     for (const r of rows ?? []) {
-      const v = Number(r.valor) || 0;
+      const contribution = personalContribution(r);
+      const v = contribution.income + Math.abs(contribution.expense);
       const key = `${r.year}-${String(r.month).padStart(2, "0")}`;
       const cur = byMonth.get(key) ?? { renda: 0, fixos: 0, variaveis: 0, hasValue: false };
       if (v > 0) cur.hasValue = true;
-      if (r.tipo === "entrada") cur.renda += v;
-      else if (r.expense_class === "fixo") cur.fixos += v;
-      else cur.variaveis += v;
+      cur.renda += contribution.income;
+      if (r.expense_class === "fixo") cur.fixos += contribution.expense;
+      else cur.variaveis += contribution.expense;
       byMonth.set(key, cur);
     }
 
