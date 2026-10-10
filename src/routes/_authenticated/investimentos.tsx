@@ -438,7 +438,7 @@ function InvestimentosPage() {
                               </div>
                               <button
                                 onClick={() => rmAtivo({ data: { id: a.id } }).then(invalidateAll)}
-                                className="rounded-lg p-1.5 text-muted-foreground hover:text-red-500"
+                                className="rounded-lg p-1.5 text-muted-foreground hover:text-red-500 dark:hover:text-red-400"
                                 aria-label="Excluir"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -492,7 +492,7 @@ function InvestimentosPage() {
                       <div className="text-sm font-semibold text-primary">{brl.format(Number(ap.valor_total))}</div>
                       <button
                         onClick={() => rmAporte({ data: { id: ap.id } }).then(invalidateAll)}
-                        className="rounded-lg p-1.5 text-muted-foreground hover:text-red-500"
+                        className="rounded-lg p-1.5 text-muted-foreground hover:text-red-500 dark:hover:text-red-400"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -530,7 +530,7 @@ function InvestimentosPage() {
                           className={
                             pv.status === "reinvestido"
                               ? "font-semibold text-primary"
-                              : "font-semibold text-amber-600"
+                              : "font-semibold text-amber-600 dark:text-amber-300"
                           }
                         >
                           {pv.status === "reinvestido" ? "Reinvestido" : "A reinvestir"}
@@ -541,7 +541,7 @@ function InvestimentosPage() {
                       <div className="text-sm font-semibold text-primary">{brl.format(Number(pv.valor))}</div>
                       <button
                         onClick={() => rmProvento({ data: { id: pv.id } }).then(invalidateAll)}
-                        className="rounded-lg p-1.5 text-muted-foreground hover:text-red-500"
+                        className="rounded-lg p-1.5 text-muted-foreground hover:text-red-500 dark:hover:text-red-400"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
