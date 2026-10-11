@@ -4,6 +4,7 @@ import { personalContribution } from "./personal-finance";
 import { getFinancialCycle } from "./financial-cycle";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { financialSchema } from "./financial-schema";
+import { reversedInvestmentRecordIds } from "./investment-reversals";
 
 /**
  * shared-metrics.functions.ts
@@ -135,7 +136,7 @@ export const getAccumulatedWithPatrimony = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
 
-    const [monthlyResult, aportesResult, assetsResult] = await Promise.all([
+    const [monthlyResult, aportesResult, assetsResult, operationsResult, reversalsResult] = await Promise.all([
       supabase
         .from("month_check_rows")
         .select("transaction_date, tipo, valor, invoice_responsibility, invoice_personal_value, invoice_payment")
@@ -143,20 +144,26 @@ export const getAccumulatedWithPatrimony = createServerFn({ method: "GET" })
         .not("transaction_date", "is", null),
       supabase
         .from("aportes")
-        .select("ativo_id, data, valor_total")
+        .select("id, ativo_id, data, valor_total")
         .eq("user_id", userId),
       financialSchema(supabase).from("ativos").select("id, currency_code").eq("user_id", userId),
+      financialSchema(supabase).from("investment_cash_operations").select("id, aporte_id, provento_id").eq("user_id", userId),
+      financialSchema(supabase).from("investment_operation_reversals").select("source_operation_id").eq("user_id", userId),
     ]);
 
     if (monthlyResult.error) throw new Error(monthlyResult.error.message);
     if (aportesResult.error) throw new Error(aportesResult.error.message);
     if (assetsResult.error) throw new Error(assetsResult.error.message);
+    if (operationsResult.error) throw new Error(operationsResult.error.message);
+    if (reversalsResult.error) throw new Error(reversalsResult.error.message);
+    const { aporteIds: reversedAporteIds } = reversedInvestmentRecordIds(operationsResult.data ?? [], reversalsResult.data ?? []);
 
     // Custo registrado por moeda; totalInvestido remains BRL-only for legacy projection consumers.
     const currencyByAsset = new Map((assetsResult.data ?? []).map((asset) => [asset.id, asset.currency_code]));
     const totalInvestidoByCurrency: Record<string, number> = {};
     const contributionsByCycle = new Map<string, Record<string, number>>();
     for (const aporte of aportesResult.data ?? []) {
+      if (reversedAporteIds.has(aporte.id)) continue;
       const currency = currencyByAsset.get(aporte.ativo_id);
       if (currency) {
         const amount = Number(aporte.valor_total) || 0;
@@ -192,11 +199,19 @@ export const getAccumulatedWithPatrimony = createServerFn({ method: "GET" })
 
     let acc = 0;
     const investedAcc: Record<string, number> = {};
+    const contributionCycles = [...contributionsByCycle.entries()].sort(([a], [b]) => a.localeCompare(b));
+    let contributionIndex = 0;
     const result: AccumulatedSnapshot[] = sorted.map((m) => {
       acc += m.saldo;
       const key = `${m.year}-${String(m.month).padStart(2, "0")}`;
-      for (const [currency, amount] of Object.entries(contributionsByCycle.get(key) ?? {})) {
-        investedAcc[currency] = (investedAcc[currency] ?? 0) + amount;
+      // Include earlier cycles without budget rows; preserve retroactive contributions.
+      while (contributionIndex < contributionCycles.length) {
+        const cycle = contributionCycles[contributionIndex];
+        if (!cycle || cycle[0] > key) break;
+        for (const [currency, amount] of Object.entries(cycle[1])) {
+          investedAcc[currency] = (investedAcc[currency] ?? 0) + amount;
+        }
+        contributionIndex += 1;
       }
       return {
         ...m,
