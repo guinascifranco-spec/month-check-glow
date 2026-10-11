@@ -191,6 +191,199 @@ export type Database = {
           },
         ]
       }
+      credit_card_invoice_items: {
+        Row: {
+          created_at: string
+          id: string
+          invoice_id: string
+          month_check_row_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invoice_id: string
+          month_check_row_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          month_check_row_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_card_invoice_items_invoice_owner_fk"
+            columns: ["invoice_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "credit_card_invoices"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "credit_card_invoice_items_row_owner_fk"
+            columns: ["month_check_row_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "month_check_rows"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      credit_card_invoices: {
+        Row: {
+          card_id: string
+          closed_at: string | null
+          closing_date: string | null
+          created_at: string
+          currency_code: string
+          due_date: string | null
+          id: string
+          period_end: string
+          period_start: string
+          source: string
+          total_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          card_id: string
+          closed_at?: string | null
+          closing_date?: string | null
+          created_at?: string
+          currency_code: string
+          due_date?: string | null
+          id?: string
+          period_end: string
+          period_start: string
+          source?: string
+          total_amount: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          card_id?: string
+          closed_at?: string | null
+          closing_date?: string | null
+          created_at?: string
+          currency_code?: string
+          due_date?: string | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          source?: string
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_card_invoices_card_owner_fk"
+            columns: ["card_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      credit_card_payments: {
+        Row: {
+          account_id: string
+          amount: number
+          created_at: string
+          effective_date: string
+          id: string
+          idempotency_key: string
+          invoice_id: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          created_at?: string
+          effective_date: string
+          id?: string
+          idempotency_key: string
+          invoice_id: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          created_at?: string
+          effective_date?: string
+          id?: string
+          idempotency_key?: string
+          invoice_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_card_payments_account_owner_fk"
+            columns: ["account_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "credit_card_payments_invoice_owner_fk"
+            columns: ["invoice_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "credit_card_invoices"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      credit_cards: {
+        Row: {
+          closing_day: number | null
+          created_at: string
+          currency_code: string
+          due_day: number | null
+          id: string
+          is_active: boolean
+          last_four: string | null
+          name: string
+          payment_account_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          closing_day?: number | null
+          created_at?: string
+          currency_code?: string
+          due_day?: number | null
+          id?: string
+          is_active?: boolean
+          last_four?: string | null
+          name: string
+          payment_account_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          closing_day?: number | null
+          created_at?: string
+          currency_code?: string
+          due_day?: number | null
+          id?: string
+          is_active?: boolean
+          last_four?: string | null
+          name?: string
+          payment_account_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_cards_payment_account_owner_fk"
+            columns: ["payment_account_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       expense_categories: {
         Row: {
           color_key: string
@@ -220,6 +413,173 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      financial_accounts: {
+        Row: {
+          account_type: string
+          created_at: string
+          currency_code: string
+          id: string
+          is_active: boolean
+          name: string
+          opening_balance: number | null
+          opening_balance_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_type: string
+          created_at?: string
+          currency_code?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          opening_balance?: number | null
+          opening_balance_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_type?: string
+          created_at?: string
+          currency_code?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          opening_balance?: number | null
+          opening_balance_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      financial_movements: {
+        Row: {
+          account_id: string
+          amount: number
+          category_id: string | null
+          created_at: string
+          credit_card_payment_id: string | null
+          description: string
+          effective_date: string
+          id: string
+          movement_type: string
+          transfer_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          credit_card_payment_id?: string | null
+          description: string
+          effective_date: string
+          id?: string
+          movement_type: string
+          transfer_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          credit_card_payment_id?: string | null
+          description?: string
+          effective_date?: string
+          id?: string
+          movement_type?: string
+          transfer_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_movements_account_owner_fk"
+            columns: ["account_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "financial_movements_card_payment_owner_fk"
+            columns: ["credit_card_payment_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "credit_card_payments"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "financial_movements_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_movements_transfer_owner_fk"
+            columns: ["transfer_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transfers"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      financial_transfers: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          effective_date: string
+          from_account_id: string
+          id: string
+          status: string
+          to_account_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          effective_date: string
+          from_account_id: string
+          id?: string
+          status?: string
+          to_account_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          effective_date?: string
+          from_account_id?: string
+          id?: string
+          status?: string
+          to_account_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_transfers_from_owner_fk"
+            columns: ["from_account_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "financial_transfers_to_owner_fk"
+            columns: ["to_account_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
       }
       installment_settings: {
         Row: {
@@ -477,6 +837,64 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      associate_credit_card_invoice_row: {
+        Args: { p_invoice_id: string; p_row_id: string }
+        Returns: string
+      }
+      cancel_financial_transfer: {
+        Args: { p_transfer_id: string }
+        Returns: string
+      }
+      close_credit_card_invoice: {
+        Args: { p_invoice_id: string }
+        Returns: string
+      }
+      create_credit_card_invoice: {
+        Args: {
+          p_card_id: string
+          p_closing_date: string
+          p_due_date: string
+          p_period_end: string
+          p_period_start: string
+          p_source?: string
+          p_total_text: string
+        }
+        Returns: string
+      }
+      create_financial_movement: {
+        Args: {
+          p_account_id: string
+          p_amount_text: string
+          p_category_id?: string
+          p_description: string
+          p_effective_date: string
+          p_movement_type: string
+        }
+        Returns: string
+      }
+      create_financial_transfer: {
+        Args: {
+          p_amount_text: string
+          p_description: string
+          p_effective_date: string
+          p_from_account_id: string
+          p_to_account_id: string
+        }
+        Returns: string
+      }
+      delete_financial_movement: { Args: { p_id: string }; Returns: undefined }
+      financial_account_balances: {
+        Args: { p_as_of_date: string }
+        Returns: {
+          account_id: string
+          calculated_balance: string
+          currency_code: string
+          is_active: boolean
+          opening_balance: string
+          opening_balance_date: string
+          recorded_net_activity: string
+        }[]
+      }
       import_invoice_rows: {
         Args: {
           p_acknowledge?: boolean
@@ -486,6 +904,153 @@ export type Database = {
           p_source: string
         }
         Returns: Json
+      }
+      list_credit_card_invoice_items: {
+        Args: { p_invoice_id: string }
+        Returns: {
+          descricao: string
+          id: string
+          invoice_card: string
+          invoice_installment_current: number
+          invoice_installment_total: number
+          invoice_personal_value: string
+          invoice_responsibility: string
+          invoice_source: string
+          tipo: string
+          transaction_date: string
+          valor: string
+        }[]
+      }
+      list_credit_card_invoices: {
+        Args: never
+        Returns: {
+          card_id: string
+          card_name: string
+          closed_at: string
+          closing_date: string
+          currency_code: string
+          due_date: string
+          id: string
+          item_count: number
+          paid_amount: string
+          period_end: string
+          period_start: string
+          remaining_amount: string
+          source: string
+          total_amount: string
+        }[]
+      }
+      list_credit_card_payments: {
+        Args: { p_invoice_id: string }
+        Returns: {
+          account_id: string
+          account_name: string
+          amount: string
+          created_at: string
+          effective_date: string
+          id: string
+        }[]
+      }
+      list_credit_cards: {
+        Args: never
+        Returns: {
+          closing_day: number
+          currency_code: string
+          due_day: number
+          id: string
+          is_active: boolean
+          last_four: string
+          name: string
+          payment_account_id: string
+          payment_account_name: string
+        }[]
+      }
+      list_financial_movement_categories: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
+      list_financial_movements: {
+        Args: { p_account_id?: string; p_from_date: string; p_to_date: string }
+        Returns: {
+          account_id: string
+          account_name: string
+          amount: string
+          category_id: string
+          category_name: string
+          created_at: string
+          description: string
+          effective_date: string
+          id: string
+          movement_type: string
+          related_account_name: string
+          transfer_id: string
+          transfer_status: string
+        }[]
+      }
+      list_unlinked_invoice_rows: {
+        Args: { p_limit?: number }
+        Returns: {
+          descricao: string
+          id: string
+          invoice_card: string
+          invoice_installment_current: number
+          invoice_installment_total: number
+          invoice_personal_value: string
+          invoice_responsibility: string
+          invoice_source: string
+          tipo: string
+          transaction_date: string
+          valor: string
+        }[]
+      }
+      record_credit_card_payment: {
+        Args: {
+          p_account_id: string
+          p_amount_text: string
+          p_effective_date: string
+          p_idempotency_key: string
+          p_invoice_id: string
+        }
+        Returns: string
+      }
+      reopen_credit_card_invoice: {
+        Args: { p_invoice_id: string }
+        Returns: string
+      }
+      save_credit_card: {
+        Args: {
+          p_closing_day: number
+          p_currency_code: string
+          p_due_day: number
+          p_id: string
+          p_last_four: string
+          p_name: string
+          p_payment_account_id: string
+        }
+        Returns: string
+      }
+      set_credit_card_active: {
+        Args: { p_id: string; p_is_active: boolean }
+        Returns: string
+      }
+      unlink_credit_card_invoice_row: {
+        Args: { p_invoice_id: string; p_row_id: string }
+        Returns: string
+      }
+      update_financial_movement: {
+        Args: {
+          p_account_id: string
+          p_amount_text: string
+          p_category_id?: string
+          p_description: string
+          p_effective_date: string
+          p_id: string
+          p_movement_type: string
+        }
+        Returns: string
       }
     }
     Enums: {

@@ -1,5 +1,12 @@
 # Fechamento das pendências financeiras — sem implantação
 
+## Aplicação autorizada — plano aprovado
+
+- [x] Testar sequência com proteção explícita de isolamento, preservando updated_at — 67 SQL e 70 unitários
+- [x] Confirmar recuperação disponível e registrar totais legados antes da aplicação — arquivo público privado restaurado em cluster local
+- [ ] Aplicar M1–M4, proteção adicional, M5–M6 pelo fluxo autorizado
+- [ ] Validar acesso autenticado e preservação dos dados, sem registros financeiros fictícios
+
 ## Bloqueios restantes — revisão atual
 
 - [ ] Aplicar correção de concorrência em M4 por fluxo autorizado — edição protegida; hipótese local passou 51 verificações/12 disputas, migração original ainda falha

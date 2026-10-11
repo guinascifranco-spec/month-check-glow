@@ -22,6 +22,27 @@
       "when": 1791637947000,
       "tag": "0002_require_invoice_responsibility",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791756169925,
+      "tag": "0003_financial_accounts_m1",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791756326493,
+      "tag": "0004_financial_movements_m2",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791756414828,
+      "tag": "0005_credit_cards_invoices_m3",
+      "breakpoints": true
     }
   ]
 }

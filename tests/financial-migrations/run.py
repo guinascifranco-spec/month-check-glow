@@ -2,6 +2,7 @@
 
 Usage: python3 tests/financial-migrations/run.py
 Local hypothesis only: add --probe-parent-write (does not fix repository migrations).
+Approved additive candidate: add --test-isolation-guard (local only).
 Requires initdb, pg_ctl, psql; root runs the cluster as the sandbox's lovable user.
 No application connection configuration, credentials, or production data are used.
 """
@@ -34,7 +35,10 @@ passed = 0
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--probe-parent-write', action='store_true',
                     help='Experiment with a shared-parent write ONLY in the disposable local cluster; never an approval of the repository migrations')
+parser.add_argument('--test-isolation-guard', action='store_true',
+                    help='Test the approved additive isolation guard ONLY in the disposable cluster')
 options = parser.parse_args()
+assert not (options.probe_parent_write and options.test_isolation_guard), 'Choose one guard strategy'
 
 def sql(statement, authenticated=True, failure=None):
     global passed
@@ -106,6 +110,9 @@ try:
     for migration in migrations:
         load(migration)
         print('PASS sequence:', migration.name)
+        if options.test_isolation_guard and migration.name == '20261013220000_benefit_wallets.sql':
+            load(HERE/'purchase-isolation-guard.sql')
+            print('PASS candidate additive isolation guard immediately after M4')
     if options.probe_parent_write:
         # Hypothesis in memory only, NOT a migration file or production operation.
         # Default execution above/below always tests the unmodified repository.
@@ -193,6 +200,8 @@ try:
         for benefit_first in [False, True]:
             for privileged in [False, True]:
                 race_row = purchase()
+                row_before = sql(f"SELECT to_jsonb(r)::text FROM month_check_rows r WHERE id='{race_row}';", False)
+                movements_before = sql('SELECT count(*) FROM financial_movements;', False)
                 credit_call = f"SELECT associate_credit_card_invoice_row('{invoice}','{race_row}');"
                 benefit_call = f"SELECT record_benefit_wallet_event('{wallet}','2026-10-07','benefit_purchase','25','Mercado',NULL,'{race_row}','{key()}');"
                 if privileged:
@@ -201,10 +210,22 @@ try:
                     # Bypass the RPC's preliminary check: the storage guard must
                     # also protect a privileged UPDATE introducing a link.
                     benefit_call = f"UPDATE benefit_wallet_events SET month_check_row_id='{race_row}' WHERE movement_id='{benefit_movement}';"
+                    movements_before = sql('SELECT count(*) FROM financial_movements;', False)
+                if options.test_isolation_guard and isolation != 'READ COMMITTED':
+                    for call in [credit_call, benefit_call]:
+                        sql(f'BEGIN ISOLATION LEVEL {isolation};' + call + 'COMMIT;', not privileged,
+                            failure='Purchase associations require READ COMMITTED isolation')
+                    expect(f"SELECT (SELECT count(*) FROM credit_card_invoice_items WHERE month_check_row_id='{race_row}') + (SELECT count(*) FROM benefit_wallet_events WHERE month_check_row_id='{race_row}');", '0')
+                    assert movements_before == sql('SELECT count(*) FROM financial_movements;', False), 'Rejected association left a cash movement'
+                    assert row_before == sql(f"SELECT to_jsonb(r)::text FROM month_check_rows r WHERE id='{race_row}';", False), 'Rejected association changed budget row or updated_at'
+                    print('PASS isolation refused without side effects:', isolation, benefit_first, privileged)
+                    continue
                 association_race(benefit_call if benefit_first else credit_call, credit_call if benefit_first else benefit_call,
                                  isolation + (' / benefit first' if benefit_first else ' / card first') +
                                  (' / privileged' if privileged else ' / authenticated'), not privileged, isolation)
                 expect(f"SELECT (SELECT count(*) FROM credit_card_invoice_items WHERE month_check_row_id='{race_row}') + (SELECT count(*) FROM benefit_wallet_events WHERE month_check_row_id='{race_row}');", '1')
+                if options.test_isolation_guard:
+                    assert row_before == sql(f"SELECT to_jsonb(r)::text FROM month_check_rows r WHERE id='{race_row}';", False), 'Association changed budget row or updated_at'
     # The winner's financial fields must survive the tuple-version write.
     expect(f"SELECT tipo||':'||valor||':'||transaction_date FROM month_check_rows WHERE id='{race_row}';", 'saida:25:2026-10-07')
     sql(f"SELECT close_credit_card_invoice('{invoice}');")
@@ -216,8 +237,9 @@ try:
     sql("INSERT INTO investment_cash_operations DEFAULT VALUES;", failure='permission denied')
     dual_links = sql("SELECT count(*) FROM credit_card_invoice_items i JOIN benefit_wallet_events e USING(month_check_row_id);", False)
     assert dual_links == '0', 'INTEGRITY BLOCKER: REPEATABLE READ permitted the same purchase in card and benefit ledgers'
-    print(f'PASS {passed} SQL assertions; 12 concurrent disputes; production untouched.' +
-          (' LOCAL HYPOTHESIS ONLY: repository migration remains blocked/unfixed.' if options.probe_parent_write else ' Repository migrations verified.'))
+    print(f'PASS {passed} SQL assertions; production untouched.' +
+          (' Candidate guard: 4 READ COMMITTED races and 16 unsupported-isolation operations rejected; row/updated_at preserved.' if options.test_isolation_guard else
+           ' LOCAL HYPOTHESIS ONLY: repository migration remains blocked/unfixed.' if options.probe_parent_write else ' Repository migrations verified.'))
 finally:
     if data.exists():
         subprocess.run(prefix + ['pg_ctl','-D',str(data),'-m','immediate','stop'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
