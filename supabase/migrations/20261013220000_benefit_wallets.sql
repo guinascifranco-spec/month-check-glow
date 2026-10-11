@@ -11,7 +11,7 @@ ALTER TABLE public.financial_movements
 
 CREATE TABLE public.benefit_wallet_events (
   movement_id uuid PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
   event_type text NOT NULL CHECK (event_type IN ('benefit_credit', 'benefit_purchase')),
   month_check_row_id uuid,
   idempotency_key uuid NOT NULL,
@@ -271,7 +271,7 @@ BEGIN
       AND r.tipo = 'saida' AND r.transaction_date = p_effective_date AND r.valor = amount_value
       AND coalesce(r.invoice_payment, false) = false
       AND NOT EXISTS (SELECT 1 FROM public.credit_card_invoice_items i WHERE i.month_check_row_id = r.id AND i.user_id = uid)
-      FOR SHARE;
+      FOR UPDATE;
     IF NOT FOUND THEN RAISE EXCEPTION 'Budget row must be an unlinked expense with matching date and full amount'; END IF;
   END IF;
 
@@ -364,3 +364,80 @@ GRANT EXECUTE ON FUNCTION public.record_benefit_wallet_event(uuid,date,text,text
 GRANT EXECUTE ON FUNCTION public.unlink_benefit_budget_row(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.list_benefit_wallet_events(date,date,uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.list_unlinked_benefit_budget_rows() TO authenticated;
+
+-- Bilateral exclusion, including concurrent requests and privileged inserts.
+CREATE OR REPLACE FUNCTION public.guard_exclusive_purchase_link()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  IF NEW.month_check_row_id IS NULL THEN RETURN NEW; END IF;
+  PERFORM 1 FROM public.month_check_rows
+    WHERE id = NEW.month_check_row_id AND user_id = NEW.user_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Budget purchase not found for this user'; END IF;
+  IF TG_TABLE_NAME = 'credit_card_invoice_items' THEN
+    IF EXISTS (SELECT 1 FROM public.benefit_wallet_events
+      WHERE month_check_row_id = NEW.month_check_row_id AND user_id = NEW.user_id) THEN
+      RAISE EXCEPTION 'A budget purchase cannot belong to both a credit card and a benefit wallet';
+    END IF;
+  ELSE
+    IF EXISTS (SELECT 1 FROM public.credit_card_invoice_items
+      WHERE month_check_row_id = NEW.month_check_row_id AND user_id = NEW.user_id) THEN
+      RAISE EXCEPTION 'A budget purchase cannot belong to both a credit card and a benefit wallet';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+CREATE TRIGGER credit_card_items_exclusive_purchase
+  BEFORE INSERT OR UPDATE ON public.credit_card_invoice_items
+  FOR EACH ROW EXECUTE FUNCTION public.guard_exclusive_purchase_link();
+CREATE TRIGGER benefit_events_exclusive_purchase
+  BEFORE INSERT OR UPDATE ON public.benefit_wallet_events
+  FOR EACH ROW EXECUTE FUNCTION public.guard_exclusive_purchase_link();
+REVOKE ALL ON FUNCTION public.guard_exclusive_purchase_link() FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION public.associate_credit_card_invoice_row(p_invoice_id uuid, p_row_id uuid)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE uid uuid := auth.uid();
+BEGIN
+  IF uid IS NULL THEN RAISE EXCEPTION 'Authentication required'; END IF;
+  PERFORM 1 FROM public.credit_card_invoices WHERE id = p_invoice_id AND user_id = uid AND closed_at IS NULL FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Open invoice not found'; END IF;
+  PERFORM 1 FROM public.month_check_rows WHERE id = p_row_id AND user_id = uid
+    AND tipo IN ('saida', 'entrada') AND coalesce(invoice_payment, false) = false FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'This user’s eligible budget transaction was not found'; END IF;
+  IF EXISTS (SELECT 1 FROM public.benefit_wallet_events WHERE month_check_row_id = p_row_id AND user_id = uid) THEN
+    RAISE EXCEPTION 'A budget purchase cannot belong to both a credit card and a benefit wallet';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.month_check_rows r
+    JOIN public.credit_card_invoices i ON i.id = p_invoice_id AND i.user_id = uid
+    JOIN public.credit_cards c ON c.id = i.card_id AND c.user_id = uid
+    WHERE r.id = p_row_id AND r.user_id = uid AND c.last_four IS NOT NULL
+      AND r.invoice_card IS NOT NULL
+      AND right(regexp_replace(r.invoice_card, '[^0-9]', '', 'g'), 4) <> c.last_four
+  ) THEN RAISE EXCEPTION 'Imported card digits do not match this card'; END IF;
+  INSERT INTO public.credit_card_invoice_items(user_id, invoice_id, month_check_row_id)
+    VALUES (uid, p_invoice_id, p_row_id);
+  RETURN p_row_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.list_unlinked_invoice_rows(p_limit integer DEFAULT 200)
+RETURNS TABLE (id uuid, transaction_date date, descricao text, tipo text, valor text,
+  invoice_card text, invoice_source text, invoice_installment_current integer,
+  invoice_installment_total integer, invoice_responsibility text, invoice_personal_value text)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE uid uuid := auth.uid();
+BEGIN
+  IF uid IS NULL THEN RAISE EXCEPTION 'Authentication required'; END IF;
+  RETURN QUERY SELECT r.id, r.transaction_date, r.descricao, r.tipo, r.valor::text, r.invoice_card,
+    r.invoice_source, r.invoice_installment_current, r.invoice_installment_total,
+    r.invoice_responsibility, r.invoice_personal_value::text
+  FROM public.month_check_rows r
+  WHERE r.user_id = uid AND r.tipo IN ('saida', 'entrada') AND coalesce(r.invoice_payment, false) = false
+    AND NOT EXISTS (SELECT 1 FROM public.benefit_wallet_events e WHERE e.month_check_row_id = r.id AND e.user_id = uid)
+    AND NOT EXISTS (SELECT 1 FROM public.credit_card_invoice_items x WHERE x.month_check_row_id = r.id AND x.user_id = uid)
+  ORDER BY r.transaction_date DESC NULLS LAST, r.created_at DESC
+  LIMIT least(greatest(coalesce(p_limit, 200), 1), 500);
+END;
+$$;

@@ -4,7 +4,7 @@ ALTER TABLE public.financial_accounts
 
 CREATE TABLE public.financial_transfers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
   from_account_id uuid NOT NULL,
   to_account_id uuid NOT NULL,
   effective_date date NOT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE public.financial_transfers (
 
 CREATE TABLE public.financial_movements (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
   account_id uuid NOT NULL,
   effective_date date NOT NULL,
   movement_type text NOT NULL CHECK (movement_type IN ('income', 'expense', 'transfer_in', 'transfer_out')),

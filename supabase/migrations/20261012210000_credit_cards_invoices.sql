@@ -2,17 +2,37 @@
 ALTER TABLE public.month_check_rows
   ADD COLUMN IF NOT EXISTS invoice_card text,
   ADD COLUMN IF NOT EXISTS invoice_line integer,
-  ADD COLUMN IF NOT EXISTS invoice_payment boolean,
+  ADD COLUMN IF NOT EXISTS invoice_payment boolean NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS invoice_source text,
   ADD COLUMN IF NOT EXISTS invoice_installment_current integer,
   ADD COLUMN IF NOT EXISTS invoice_installment_total integer,
   ADD COLUMN IF NOT EXISTS invoice_responsibility text,
-  ADD COLUMN IF NOT EXISTS invoice_personal_value numeric(14, 2),
+  ADD COLUMN IF NOT EXISTS invoice_personal_value numeric,
   ADD CONSTRAINT month_check_rows_id_user_id_key UNIQUE (id, user_id);
+
+-- Match the audited legacy contract without casts, rounding or backfills.
+-- Responsibility validation remains in validate_invoice_responsibility().
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_attribute
+    WHERE attrelid = 'public.month_check_rows'::regclass
+      AND attname = 'invoice_personal_value' AND NOT attisdropped
+      AND atttypid = 'numeric'::regtype AND atttypmod = -1 AND NOT attnotnull
+  ) OR NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'month_check_rows'
+      AND column_name = 'invoice_payment' AND data_type = 'boolean'
+      AND is_nullable = 'NO' AND column_default = 'false'
+  ) THEN
+    RAISE EXCEPTION 'Invoice columns differ from the audited legacy contract; stop without modifying existing values';
+  END IF;
+END;
+$$;
 
 CREATE TABLE public.credit_cards (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
   name text NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 80),
   last_four text CHECK (last_four IS NULL OR last_four ~ '^[0-9]{4}$'),
   currency_code text NOT NULL DEFAULT 'BRL' CHECK (currency_code ~ '^[A-Z]{3}$'),
@@ -29,7 +49,7 @@ CREATE TABLE public.credit_cards (
 
 CREATE TABLE public.credit_card_invoices (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
   card_id uuid NOT NULL,
   period_start date NOT NULL,
   period_end date NOT NULL,
@@ -50,7 +70,7 @@ CREATE TABLE public.credit_card_invoices (
 
 CREATE TABLE public.credit_card_payments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
   invoice_id uuid NOT NULL,
   account_id uuid NOT NULL,
   effective_date date NOT NULL,
@@ -67,7 +87,7 @@ CREATE TABLE public.credit_card_payments (
 
 CREATE TABLE public.credit_card_invoice_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
   invoice_id uuid NOT NULL,
   month_check_row_id uuid NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
