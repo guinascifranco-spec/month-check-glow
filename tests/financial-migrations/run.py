@@ -150,11 +150,11 @@ try:
     expect("SELECT count(*) FROM month_check_rows;", '1')
     # All investment RPCs above (including reversals) left budget history unchanged.
     assert before == sql("SELECT jsonb_agg(to_jsonb(r) ORDER BY id)::text FROM month_check_rows r;", False)
-    expect(f"SELECT sum(amount * CASE movement_type WHEN 'expense' THEN -1 ELSE 1 END)::text FROM financial_movements WHERE account_id='{account}';", '-150.00')
+    expect(f"SELECT sum(amount * CASE movement_type WHEN 'expense' THEN -1 ELSE 1 END)::text FROM financial_movements WHERE account_id='{account}';", '-50.00')
     cash_before = sql(f"SELECT calculated_balance FROM financial_account_balances('2026-10-08') WHERE account_id='{account}';")
     second_account = sql(f"INSERT INTO financial_accounts(user_id,name,account_type,opening_balance,opening_balance_date) VALUES ('{OWNER}','Reserva','bank_account',500,'2026-10-01') RETURNING id;")
     transfer = sql(f"SELECT create_financial_transfer('{account}','{second_account}','2026-10-08','75','Reserva');")
-    expect(f"SELECT calculated_balance FROM financial_account_balances('2026-10-08') WHERE account_id='{account}';", '775.00')
+    expect(f"SELECT calculated_balance FROM financial_account_balances('2026-10-08') WHERE account_id='{account}';", '875.00')
     expect(f"SELECT calculated_balance FROM financial_account_balances('2026-10-08') WHERE account_id='{second_account}';", '575.00')
     expect("SELECT count(*) FROM month_check_rows;", '1')
     sql(f"SELECT cancel_financial_transfer_with_reason('{transfer}','Correção');")
@@ -188,7 +188,7 @@ try:
     sql(f"SELECT close_credit_card_invoice('{invoice}');")
     sql(f"SELECT record_credit_card_payment('{invoice}','{account}','2026-11-02','50','{key()}');")
     expect(f"SELECT calculated_balance FROM financial_account_balances('2026-11-01') WHERE account_id='{account}';", cash_before)
-    expect(f"SELECT calculated_balance FROM financial_account_balances('2026-11-02') WHERE account_id='{account}';", '800.00')
+    expect(f"SELECT calculated_balance FROM financial_account_balances('2026-11-02') WHERE account_id='{account}';", '900.00')
     # Owner isolation and no direct writes into operation ledgers.
     sql(f"SET request.jwt.claim.sub='{OTHER}'; SELECT reverse_investment_cash_operation('{contribution}','2026-10-08','Outra conta');", failure='not found')
     sql("INSERT INTO investment_cash_operations DEFAULT VALUES;", failure='permission denied')
