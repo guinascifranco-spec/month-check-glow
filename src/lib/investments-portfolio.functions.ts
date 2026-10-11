@@ -1,3 +1,4 @@
+import { financialSchema } from "./financial-schema";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -9,7 +10,8 @@ const PROVENTO_TYPES = ["dividendo", "jcp", "rendimento", "cupom"] as const;
 export const listAtivos = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const supabase = financialSchema(context.supabase);
     const { data, error } = await supabase
       .from("ativos")
       .select("*")
@@ -33,7 +35,8 @@ export const createAtivo = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const supabase = financialSchema(context.supabase);
     const { data: row, error } = await supabase
       .from("ativos")
       .insert({
@@ -53,7 +56,8 @@ export const deleteAtivo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const supabase = financialSchema(context.supabase);
     const { error } = await supabase
       .from("ativos")
       .delete()
@@ -74,7 +78,7 @@ export const updateAtivoCurrentValue = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: id, error } = await context.supabase.rpc("record_investment_valuation", {
+    const { data: id, error } = await financialSchema(context.supabase).rpc("record_investment_valuation", {
       p_asset_id: data.id, p_market_value_text: data.current_value,
       p_reference_date: data.current_value_date, p_note: data.note ?? null,
     });
@@ -99,7 +103,7 @@ export const createCashLinkedContribution = createServerFn({ method: "POST" })
     provento_id: z.string().uuid().optional(),
   }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: id, error } = await context.supabase.rpc("record_investment_contribution", {
+    const { data: id, error } = await financialSchema(context.supabase).rpc("record_investment_contribution", {
       p_asset_id: data.ativo_id,
       p_account_id: data.account_id,
       p_effective_date: data.effective_date,
@@ -118,7 +122,7 @@ export const createInvestmentRedemption = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => cashOperationInput.extend({ amount: z.string().regex(/^\d+(?:\.\d{1,2})?$/) }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: id, error } = await context.supabase.rpc("record_investment_redemption", {
+    const { data: id, error } = await financialSchema(context.supabase).rpc("record_investment_redemption", {
       p_asset_id: data.ativo_id,
       p_account_id: data.account_id,
       p_effective_date: data.effective_date,
@@ -137,7 +141,7 @@ export const recordInvestmentDividendReceipt = createServerFn({ method: "POST" }
     idempotency_key: z.string().uuid(),
   }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: id, error } = await context.supabase.rpc("record_investment_dividend_receipt", {
+    const { data: id, error } = await financialSchema(context.supabase).rpc("record_investment_dividend_receipt", {
       p_asset_id: data.ativo_id, p_provento_id: data.provento_id, p_account_id: data.account_id,
       p_idempotency_key: data.idempotency_key,
     });
@@ -148,7 +152,7 @@ export const recordInvestmentDividendReceipt = createServerFn({ method: "POST" }
 export const listInvestmentCashOperations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    const { data, error } = await financialSchema(context.supabase)
       .from("investment_cash_operations")
       .select("id, asset_id, operation_type, effective_date, amount, currency_code, description, aporte_id, provento_id")
       .eq("user_id", context.userId)
@@ -171,7 +175,8 @@ const aporteInput = z.object({
 export const listAportes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const supabase = financialSchema(context.supabase);
     const { data, error } = await supabase
       .from("aportes")
       .select("*")
@@ -185,7 +190,8 @@ export const createAporte = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: z.input<typeof aporteInput>) => aporteInput.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const supabase = financialSchema(context.supabase);
     const taxas = data.taxas ?? 0;
     const valor_total = data.quantidade * data.valor_unitario + taxas;
     const { data: aporte, error } = await supabase
@@ -241,7 +247,8 @@ export const bulkCreateAportesRetroativos = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const supabase = financialSchema(context.supabase);
     const rows = data.linhas.map((l) => {
       const taxas = l.taxas ?? 0;
       return {
@@ -264,7 +271,8 @@ export const deleteAporte = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const supabase = financialSchema(context.supabase);
     // reverte proventos vinculados
     await supabase
       .from("proventos")
@@ -284,7 +292,8 @@ export const deleteAporte = createServerFn({ method: "POST" })
 export const listProventos = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const supabase = financialSchema(context.supabase);
     const { data, error } = await supabase
       .from("proventos")
       .select("*")
@@ -312,7 +321,8 @@ export const createProvento = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const supabase = financialSchema(context.supabase);
     const { data: row, error } = await supabase
       .from("proventos")
       .insert({
@@ -333,7 +343,8 @@ export const deleteProvento = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const supabase = financialSchema(context.supabase);
     const { error } = await supabase
       .from("proventos")
       .delete()

@@ -1,3 +1,4 @@
+import { financialSchema } from "./financial-schema";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -9,7 +10,7 @@ export const recordBenefitWalletEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => benefitEventInputSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { data: id, error } = await context.supabase.rpc("record_benefit_wallet_event", {
+    const { data: id, error } = await financialSchema(context.supabase).rpc("record_benefit_wallet_event", {
       p_account_id: data.account_id,
       p_effective_date: data.effective_date,
       p_event_type: data.event_type,
@@ -36,7 +37,7 @@ export const listBenefitWalletEvents = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase.rpc("list_benefit_wallet_events", {
+    const { data: rows, error } = await financialSchema(context.supabase).rpc("list_benefit_wallet_events", {
       p_from_date: data.from_date,
       p_to_date: data.to_date,
       p_account_id: data.account_id,
@@ -48,7 +49,7 @@ export const listBenefitWalletEvents = createServerFn({ method: "POST" })
 export const listUnlinkedBenefitBudgetRows = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase.rpc("list_unlinked_benefit_budget_rows");
+    const { data, error } = await financialSchema(context.supabase).rpc("list_unlinked_benefit_budget_rows");
     if (error) throw new Error(error.message);
     return data ?? [];
   });
@@ -57,7 +58,7 @@ export const unlinkBenefitBudgetRow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ movement_id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: id, error } = await context.supabase.rpc("unlink_benefit_budget_row", {
+    const { data: id, error } = await financialSchema(context.supabase).rpc("unlink_benefit_budget_row", {
       p_movement_id: data.movement_id,
     });
     if (error) throw new Error(error.message);
