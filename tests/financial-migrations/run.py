@@ -193,6 +193,8 @@ try:
     sql(f"SET request.jwt.claim.sub='{OTHER}'; SELECT reverse_investment_cash_operation('{contribution}','2026-10-08','Outra conta');", failure='not found')
     sql("INSERT INTO investment_cash_operations DEFAULT VALUES;", failure='permission denied')
     print(f'PASS {passed} SQL regression assertions; synthetic dependencies and six migrations only; production untouched.')
+    dual_links = sql("SELECT count(*) FROM credit_card_invoice_items i JOIN benefit_wallet_events e USING(month_check_row_id);", False)
+    assert dual_links == '0', 'INTEGRITY BLOCKER: REPEATABLE READ permitted the same purchase in card and benefit ledgers'
 finally:
     if data.exists():
         subprocess.run(prefix + ['pg_ctl','-D',str(data),'-m','immediate','stop'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
