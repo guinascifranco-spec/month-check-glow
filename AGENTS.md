@@ -9,6 +9,6 @@
 - Keep invoice integral values for reconciliation and deduplication; use personalContribution for all consumption metrics, classifying invoice credits as expense offsets and explicit invoice payments as neutral, while null responsibility preserves legacy behavior.
 - Financial SQL regressions must run only against a disposable local PostgreSQL cluster with an explicit socket and port; this prevents tests from reaching the connected production database.
 - Investment retries compare a normalized stored request under a per-owner/key transaction lock; this rejects key reuse with different parameters without duplicating cash activity.
-- Pending financial migrations use an explicit app-owned schema contract over the authenticated client's existing public schema; this keeps generated live types untouched and does not create another connection or imply deployment.
+- Financial SQL-nullable RPC arguments use an explicit app-owned contract replacing overlapping generated function types on the existing authenticated client; this preserves SQL NULL semantics without editing generated types or creating another connection.
 - Bun unit tests run separately from the application compiler; this prevents Bun runtime declarations from changing the Worker's fetch types.
 - Investment cost metrics and charts share reversal record filtering; this prevents cancelled contributions from remaining in accumulated cost while retaining audit rows.
