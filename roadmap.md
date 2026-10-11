@@ -2,9 +2,9 @@
 
 ## Bloqueios restantes — revisão atual
 
-- [ ] Corrigir e testar a disputa cartão/benefício em REPEATABLE READ, respeitando arquivos protegidos
-- [ ] Documentar alternativas de exclusão/retenção sem escolher uma política
-- [ ] Conferir a entrada órfã do lockfile sem modificá-lo e registrar resultados reais
+- [ ] Aplicar correção de concorrência em M4 por fluxo autorizado — edição protegida; hipótese local passou 51 verificações/12 disputas, migração original ainda falha
+- [x] Documentar alternativas de exclusão/retenção sem escolher uma política
+- [x] Conferir a entrada órfã do lockfile sem modificá-lo e registrar resultados reais em financial-blockers-review.md
 
 - [x] Substituir os cinco TODOs por regressões dos comportamentos existentes
 - [x] Alinhar aportes revertidos no histórico e na tela Investimentos
