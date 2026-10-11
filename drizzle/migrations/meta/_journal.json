@@ -64,6 +64,13 @@
       "when": 1791756556081,
       "tag": "0008_investment_net_worth_m5",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791756601508,
+      "tag": "0009_financial_reconciliation_m6",
+      "breakpoints": true
     }
   ]
 }

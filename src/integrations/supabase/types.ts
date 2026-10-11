@@ -465,6 +465,59 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_account_reconciliations: {
+        Row: {
+          account_id: string
+          account_type: string
+          calculated_balance: number | null
+          created_at: string
+          currency_code: string
+          difference: number | null
+          id: string
+          note: string | null
+          reference_date: string
+          reported_balance: number
+          status: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          account_type: string
+          calculated_balance?: number | null
+          created_at?: string
+          currency_code: string
+          difference?: number | null
+          id?: string
+          note?: string | null
+          reference_date: string
+          reported_balance: number
+          status: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          account_type?: string
+          calculated_balance?: number | null
+          created_at?: string
+          currency_code?: string
+          difference?: number | null
+          id?: string
+          note?: string | null
+          reference_date?: string
+          reported_balance?: number
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_account_reconciliations_account_owner_fk"
+            columns: ["account_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       financial_accounts: {
         Row: {
           account_type: string
@@ -571,6 +624,38 @@ export type Database = {
           },
           {
             foreignKeyName: "financial_movements_transfer_owner_fk"
+            columns: ["transfer_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transfers"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      financial_transfer_cancellations: {
+        Row: {
+          created_at: string
+          id: string
+          reason: string
+          transfer_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason: string
+          transfer_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason?: string
+          transfer_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_transfer_cancellations_transfer_owner_fk"
             columns: ["transfer_id", "user_id"]
             isOneToOne: false
             referencedRelation: "financial_transfers"
@@ -768,6 +853,95 @@ export type Database = {
             columns: ["provento_id", "user_id"]
             isOneToOne: false
             referencedRelation: "proventos"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      investment_operation_reversals: {
+        Row: {
+          compensating_movement_id: string
+          created_at: string
+          effective_date: string
+          id: string
+          reason: string
+          source_operation_id: string
+          user_id: string
+        }
+        Insert: {
+          compensating_movement_id: string
+          created_at?: string
+          effective_date: string
+          id?: string
+          reason: string
+          source_operation_id: string
+          user_id: string
+        }
+        Update: {
+          compensating_movement_id?: string
+          created_at?: string
+          effective_date?: string
+          id?: string
+          reason?: string
+          source_operation_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investment_operation_reversals_movement_owner_fk"
+            columns: ["compensating_movement_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_movements"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "investment_operation_reversals_source_owner_fk"
+            columns: ["source_operation_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "investment_cash_operations"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      investment_valuations: {
+        Row: {
+          asset_id: string
+          currency_code: string
+          id: string
+          market_value: number
+          note: string | null
+          origin: string
+          recorded_at: string
+          reference_date: string
+          user_id: string
+        }
+        Insert: {
+          asset_id: string
+          currency_code: string
+          id?: string
+          market_value: number
+          note?: string | null
+          origin?: string
+          recorded_at?: string
+          reference_date: string
+          user_id: string
+        }
+        Update: {
+          asset_id?: string
+          currency_code?: string
+          id?: string
+          market_value?: number
+          note?: string | null
+          origin?: string
+          recorded_at?: string
+          reference_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investment_valuations_asset_owner_fk"
+            columns: ["asset_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "ativos"
             referencedColumns: ["id", "user_id"]
           },
         ]
@@ -976,6 +1150,10 @@ export type Database = {
         Args: { p_transfer_id: string }
         Returns: string
       }
+      cancel_financial_transfer_with_reason: {
+        Args: { p_reason: string; p_transfer_id: string }
+        Returns: string
+      }
       close_credit_card_invoice: {
         Args: { p_invoice_id: string }
         Returns: string
@@ -1112,6 +1290,23 @@ export type Database = {
           payment_account_name: string
         }[]
       }
+      list_financial_account_reconciliations: {
+        Args: { p_account_id?: string }
+        Returns: {
+          account_id: string
+          account_name: string
+          account_type: string
+          calculated_balance: string
+          created_at: string
+          currency_code: string
+          difference: string
+          id: string
+          note: string
+          reference_date: string
+          reported_balance: string
+          status: string
+        }[]
+      }
       list_financial_movement_categories: {
         Args: never
         Returns: {
@@ -1135,6 +1330,20 @@ export type Database = {
           related_account_name: string
           transfer_id: string
           transfer_status: string
+        }[]
+      }
+      list_investment_valuations: {
+        Args: { p_asset_id?: string }
+        Returns: {
+          asset_id: string
+          asset_name: string
+          currency_code: string
+          id: string
+          market_value: string
+          note: string
+          origin: string
+          recorded_at: string
+          reference_date: string
         }[]
       }
       list_unlinked_benefit_budget_rows: {
@@ -1185,6 +1394,15 @@ export type Database = {
         }
         Returns: string
       }
+      record_financial_account_reconciliation: {
+        Args: {
+          p_account_id: string
+          p_note?: string
+          p_reference_date: string
+          p_reported_balance_text: string
+        }
+        Returns: string
+      }
       record_investment_contribution: {
         Args: {
           p_account_id: string
@@ -1219,8 +1437,25 @@ export type Database = {
         }
         Returns: string
       }
+      record_investment_valuation: {
+        Args: {
+          p_asset_id: string
+          p_market_value_text: string
+          p_note?: string
+          p_reference_date: string
+        }
+        Returns: string
+      }
       reopen_credit_card_invoice: {
         Args: { p_invoice_id: string }
+        Returns: string
+      }
+      reverse_investment_cash_operation: {
+        Args: {
+          p_effective_date: string
+          p_operation_id: string
+          p_reason: string
+        }
         Returns: string
       }
       save_credit_card: {
