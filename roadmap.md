@@ -1,8 +1,9 @@
 # Correção consolidada financeira — sem implantação
 
-- [ ] Corrigir migrações financeiras e preservar definições legadas
-- [ ] Testar sequência e integridade em PostgreSQL temporário isolado
-- [ ] Executar regressões e registrar relatório para aprovação
+- [x] Corrigir migrações financeiras e preservar definições legadas
+- [x] Testar sequência e integridade em PostgreSQL temporário isolado
+- [x] Executar regressões e registrar relatório para aprovação
+- [ ] Aplicação e validação das telas financeiras — bloqueadas até autorização explícita para migrações
 
 # Visão Futura
 
