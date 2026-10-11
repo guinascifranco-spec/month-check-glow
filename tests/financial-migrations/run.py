@@ -26,7 +26,7 @@ if prefix:
 data = workspace / 'data'
 port = '55439'
 connection = ['psql', '-X', '-h', str(workspace), '-p', port, '-U', 'lovable' if prefix else pwd.getpwuid(os.getuid()).pw_name,
-              '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-At']
+              '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-qAt']
 passed = 0
 
 def sql(statement, authenticated=True, failure=None):
