@@ -68,6 +68,9 @@ export type Database = {
         Row: {
           corretora: string | null
           created_at: string
+          currency_code: string
+          current_value_date: string | null
+          current_value_known: boolean
           id: string
           nome: string
           rentabilidade_mensal_pct: number
@@ -79,6 +82,9 @@ export type Database = {
         Insert: {
           corretora?: string | null
           created_at?: string
+          currency_code?: string
+          current_value_date?: string | null
+          current_value_known?: boolean
           id?: string
           nome: string
           rentabilidade_mensal_pct?: number
@@ -90,6 +96,9 @@ export type Database = {
         Update: {
           corretora?: string | null
           created_at?: string
+          currency_code?: string
+          current_value_date?: string | null
+          current_value_known?: boolean
           id?: string
           nome?: string
           rentabilidade_mensal_pct?: number
@@ -683,6 +692,86 @@ export type Database = {
         }
         Relationships: []
       }
+      investment_cash_operations: {
+        Row: {
+          amount: number
+          aporte_id: string | null
+          asset_id: string
+          created_at: string
+          currency_code: string
+          description: string
+          effective_date: string
+          financial_movement_id: string | null
+          id: string
+          idempotency_key: string
+          operation_type: string
+          provento_id: string | null
+          request_payload: Json
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          aporte_id?: string | null
+          asset_id: string
+          created_at?: string
+          currency_code: string
+          description: string
+          effective_date: string
+          financial_movement_id?: string | null
+          id?: string
+          idempotency_key: string
+          operation_type: string
+          provento_id?: string | null
+          request_payload: Json
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          aporte_id?: string | null
+          asset_id?: string
+          created_at?: string
+          currency_code?: string
+          description?: string
+          effective_date?: string
+          financial_movement_id?: string | null
+          id?: string
+          idempotency_key?: string
+          operation_type?: string
+          provento_id?: string | null
+          request_payload?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investment_cash_operations_aporte_owner_fk"
+            columns: ["aporte_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "aportes"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "investment_cash_operations_asset_owner_fk"
+            columns: ["asset_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "ativos"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "investment_cash_operations_movement_owner_fk"
+            columns: ["financial_movement_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_movements"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "investment_cash_operations_provento_owner_fk"
+            columns: ["provento_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "proventos"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       investments: {
         Row: {
           balance: number
@@ -1093,6 +1182,40 @@ export type Database = {
           p_effective_date: string
           p_idempotency_key: string
           p_invoice_id: string
+        }
+        Returns: string
+      }
+      record_investment_contribution: {
+        Args: {
+          p_account_id: string
+          p_asset_id: string
+          p_description: string
+          p_effective_date: string
+          p_fees_text: string
+          p_idempotency_key: string
+          p_provento_id?: string
+          p_quantity_text: string
+          p_unit_price_text: string
+        }
+        Returns: string
+      }
+      record_investment_dividend_receipt: {
+        Args: {
+          p_account_id: string
+          p_asset_id: string
+          p_idempotency_key: string
+          p_provento_id: string
+        }
+        Returns: string
+      }
+      record_investment_redemption: {
+        Args: {
+          p_account_id: string
+          p_amount_text: string
+          p_asset_id: string
+          p_description: string
+          p_effective_date: string
+          p_idempotency_key: string
         }
         Returns: string
       }
