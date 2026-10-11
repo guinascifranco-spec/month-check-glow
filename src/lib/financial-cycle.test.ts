@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { formatFinancialCycleRange, getFinancialCycle } from "./financial-cycle";
 import { personalContribution } from "./personal-finance";
+import { calculateAccountBalance, type BalanceMovement } from "./financial-movements";
 
 describe("getFinancialCycle", () => {
   test("includes the 1st in the cycle started on the prior month's 2nd", () => {
@@ -156,9 +157,39 @@ describe("getFinancialCycle", () => {
 });
 
 describe("Future balance and cash specifications", () => {
-  test.todo("an investment principal contribution is not consumption expense");
-  test.todo("withdrawing investment principal is not employment income");
-  test.todo("withdrawing emergency reserves does not turn a deficit into income");
-  test.todo("transfers between accounts are neither income nor consumption");
-  test.todo("invoice payment affects cash on its payment date without duplicating consumption");
+  const account = { opening_balance: "1000.00", opening_balance_date: "2026-10-01" };
+  const activity = (type: BalanceMovement["movement_type"], amount: string, date = "2026-10-15"): BalanceMovement => ({
+    movement_type: type, amount, effective_date: date,
+    transfer_status: type.startsWith("transfer_") ? "completed" : null,
+  });
+
+  // Cash RPCs never insert budget rows (also exercised in the local SQL suite).
+  // Do not fabricate classification flags for legacy manually entered rows.
+  test("an investment principal contribution decreases cash independently of consumption", () => {
+    expect(calculateAccountBalance(account, [activity("expense", "200.00")]).calculatedBalance).toBe("800.00");
+    expect(personalContribution({ tipo: "saida", valor: 80 }).expense).toBe(80);
+  });
+  test("withdrawing investment principal increases cash, not salary budget rows", () => {
+    expect(calculateAccountBalance(account, [activity("income", "200.00")]).calculatedBalance).toBe("1200.00");
+    expect(personalContribution({ tipo: "entrada", valor: 500 }).income).toBe(500);
+  });
+  test("withdrawing emergency reserves does not change the budget deficit", () => {
+    const income = personalContribution({ tipo: "entrada", valor: 500 }).income;
+    const expense = personalContribution({ tipo: "saida", valor: 700 }).expense;
+    expect(calculateAccountBalance(account, [activity("income", "200.00")]).calculatedBalance).toBe("1200.00");
+    expect(income - expense).toBe(-200);
+  });
+  test("transfers conserve combined cash and cancelled transfers have no effect", () => {
+    const outgoing = calculateAccountBalance(account, [activity("transfer_out", "200.00")]);
+    const incoming = calculateAccountBalance(account, [activity("transfer_in", "200.00")]);
+    expect(Number(outgoing.calculatedBalance) + Number(incoming.calculatedBalance)).toBe(2000);
+    expect(calculateAccountBalance(account, [{ ...activity("transfer_out", "200.00"), transfer_status: "cancelled" }]).calculatedBalance).toBe("1000.00");
+  });
+  test("invoice payment changes cash only on payment date and does not duplicate consumption", () => {
+    const payment = activity("expense", "200.00", "2026-11-02");
+    expect(calculateAccountBalance(account, [payment], "2026-11-01").calculatedBalance).toBe("1000.00");
+    expect(calculateAccountBalance(account, [payment], "2026-11-02").calculatedBalance).toBe("800.00");
+    expect(personalContribution({ tipo: "saida", valor: 200, invoice_payment: true }).expense).toBe(0);
+    expect(personalContribution({ tipo: "saida", valor: 200, invoice_responsibility: "shared", invoice_personal_value: 120 }).expense).toBe(120);
+  });
 });

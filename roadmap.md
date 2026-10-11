@@ -1,3 +1,12 @@
+# Fechamento das pendências financeiras — sem implantação
+
+- [x] Substituir os cinco TODOs por regressões dos comportamentos existentes
+- [x] Alinhar aportes revertidos no histórico e na tela Investimentos
+- [ ] Garantir exclusividade cartão/benefício sob concorrência real — falha REPEATABLE READ reproduzida; migração protegida contra edição sem aplicação
+- [x] Documentar titularidade e estratégia de exclusão para aprovação
+- [x] Revisar diff anterior, executar testes isolados e registrar resultado
+- [ ] Aprovar política de exclusão/retenção e implementar limpeza privilegiada auditável — depende de decisão do usuário
+
 # Correção consolidada financeira — sem implantação
 
 - [x] Corrigir migrações financeiras e preservar definições legadas

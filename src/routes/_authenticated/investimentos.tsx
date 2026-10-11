@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { listFinancialAccounts } from "@/lib/financial-accounts.functions";
+import { reversedInvestmentRecordIds } from "@/lib/investment-reversals";
 import { toast } from "sonner";
 import { listInvestmentValuations, listInvestmentOperationReversals, reverseInvestmentCashOperation } from "@/lib/financial-reconciliation.functions";
 import {
@@ -205,9 +206,7 @@ function InvestimentosPage() {
     queryKey: ["investment-operation-reversals"],
     queryFn: () => fetchReversals(),
   });
-  const reversedOperationIds = new Set(reversals.map((row) => row.source_operation_id));
-  const reversedAporteIds = new Set(cashOperations.filter((operation) => reversedOperationIds.has(operation.id) && operation.aporte_id).map((operation) => operation.aporte_id as string));
-  const reversedProventoIds = new Set(cashOperations.filter((operation) => reversedOperationIds.has(operation.id) && operation.provento_id).map((operation) => operation.provento_id as string));
+  const { aporteIds: reversedAporteIds, proventoIds: reversedProventoIds } = reversedInvestmentRecordIds(cashOperations, reversals);
   const activeAportes = aportes.filter((aporte) => !reversedAporteIds.has(aporte.id));
   const activeProventos = proventos.filter((provento) => !reversedProventoIds.has(provento.id));
 
@@ -273,7 +272,7 @@ function InvestimentosPage() {
       string,
       { acao: number; fii: number; renda_fixa: number; cripto: number; total: number }
     >();
-    const sorted = [...aportes]
+    const sorted = [...activeAportes]
       .filter((a) => ativosFiltro.has(a.ativo_id))
       .sort((a, b) => a.data.localeCompare(b.data));
     if (sorted.length === 0) return [];
@@ -314,7 +313,7 @@ function InvestimentosPage() {
       cursor.setMonth(cursor.getMonth() + 1);
     }
     return Array.from(buckets.entries()).map(([k, v]) => ({ mes: ymLabel(k), ...v }));
-  }, [aportes, ativos, ativosFiltro]);
+  }, [activeAportes, ativos, ativosFiltro]);
 
   // --- Agrupamento visual da lista de ativos por tipo ---
   const grupos = useMemo(() => {
