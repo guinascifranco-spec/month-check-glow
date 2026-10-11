@@ -18,7 +18,7 @@ OWNER = '11111111-1111-4111-8111-111111111111'
 OTHER = '22222222-2222-4222-8222-222222222222'
 env = {k: v for k, v in os.environ.items() if not k.startswith('PG')}
 env['HOME'] = '/tmp'
-prefix = ['runuser', '-u', 'lovable', '--'] if os.getuid() == 0 else []
+prefix = ['setpriv', '--reuid=1000', '--regid=1000', '--clear-groups', '--'] if os.getuid() == 0 else []
 workspace = Path(tempfile.mkdtemp(prefix='month-check-sql-', dir='/tmp'))
 if prefix:
     user = pwd.getpwnam('lovable')
