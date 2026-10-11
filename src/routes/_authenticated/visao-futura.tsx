@@ -139,7 +139,7 @@ function FutureViewPage() {
 
         <p className="mb-6 text-sm text-muted-foreground">
           Projeção baseada nos dados financeiros registrados no Month Check.
-          <span className="block">Usa a média de até três meses com registros para renda e gastos variáveis, os últimos valores fixos e as parcelas enquanto estiverem ativas.</span>
+          <span className="block">Usa até três ciclos com lançamentos reais para calcular a média histórica; parcelas e projeções futuras são exibidas por mês-calendário.</span>
           <span className="block">Mostra o resultado do fluxo mensal, não o valor dos investimentos ou patrimônio futuro.</span>
         </p>
 

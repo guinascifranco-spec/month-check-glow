@@ -22,7 +22,11 @@ import { PageTabs } from "@/components/page-tabs";
 import { MobileNav } from "@/components/mobile-nav";
 import { Slider } from "@/components/ui/slider";
 import { getAccumulatedWithPatrimony } from "@/lib/shared-metrics.functions";
+import { formatFinancialCycleRange, getFinancialCycle } from "@/lib/financial-cycle";
 import { listAtivos, listProventos } from "@/lib/investments-portfolio.functions";
+import { getIntegratedFinancialSnapshot, getKnownNetWorth } from "@/lib/patrimony.functions";
+import { formatCents } from "@/lib/net-worth";
+import { decimalToCents } from "@/lib/financial-reconciliation";
 
 export const Route = createFileRoute("/_authenticated/visao-geral")({
   head: () => ({
@@ -44,6 +48,9 @@ type Ativo = {
   nome: string;
   corretora: string | null;
   saldo_atual: number;
+  current_value_known: boolean;
+  current_value_date: string | null;
+  currency_code: string;
   rentabilidade_mensal_pct: number;
 };
 
@@ -55,17 +62,21 @@ type MonthSnapshot = {
   saldo: number;
   saldoAcumulado: number;
   totalInvestido: number;
-  patrimonioTotal: number;
+  patrimonioTotal: null;
 };
 
 type PatrimonyData = {
   months: MonthSnapshot[];
   totalInvestido: number;
+  totalInvestidoByCurrency: Record<string, number>;
   saldoAcumulado: number;
-  patrimonioTotal: number;
+  patrimonioTotal: null;
 };
 
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const currencySummary = (totals: Record<string, number>) => Object.entries(totals)
+  .map(([code, value]) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: code }).format(value))
+  .join(" · ") || "—";
 const MES_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const monthLabel = (y: number, m: number) => `${MES_ABBR[m - 1]}/${String(y).slice(-2)}`;
 
@@ -76,6 +87,8 @@ function VisaoGeralPage() {
   const fetchPatrimony = useServerFn(getAccumulatedWithPatrimony);
   const fetchAtivos = useServerFn(listAtivos);
   const fetchProventos = useServerFn(listProventos);
+  const fetchKnownNetWorth = useServerFn(getKnownNetWorth);
+  const fetchIntegratedSnapshot = useServerFn(getIntegratedFinancialSnapshot);
 
   const patrimonyKey = ["patrimony-accumulated"] as const;
   const ativosKey = ["ativos"] as const;
@@ -91,25 +104,45 @@ function VisaoGeralPage() {
   });
   const { data: proventos = [] } = useQuery({
     queryKey: ["proventos"],
-    queryFn: () => fetchProventos() as Promise<Array<{ valor: number }>>,
+    queryFn: () => fetchProventos() as Promise<Array<{ valor: number; ativo_id: string }>>,
+  });
+  const { data: netWorth = [], isLoading: netWorthLoading } = useQuery({
+    queryKey: ["known-net-worth"],
+    queryFn: () => fetchKnownNetWorth(),
+  });
+  const { data: integratedSnapshot, isLoading: integratedLoading } = useQuery({
+    queryKey: ["integrated-financial-snapshot"],
+    queryFn: () => fetchIntegratedSnapshot(),
   });
 
-  const monthly = patrimony?.months ?? [];
+  const monthly = useMemo(() => patrimony?.months ?? [], [patrimony?.months]);
   const latestMonth = monthly[monthly.length - 1];
-  const totalInvestido = patrimony?.totalInvestido ?? 0;
+  const totalInvestidoLabel = currencySummary(patrimony?.totalInvestidoByCurrency ?? {});
   const saldoAcumulado = patrimony?.saldoAcumulado ?? 0;
-  const patrimonioTotal = patrimony?.patrimonioTotal ?? 0;
-  const totalProventos = proventos.reduce((sum, item) => sum + Number(item.valor), 0);
+  const brlNetWorth = netWorth.find((item) => item.currencyCode === "BRL");
+  const patrimonioTotal = brlNetWorth ? Number(BigInt(brlNetWorth.netWorthCents)) / 100 : 0;
+  const netWorthIncomplete = !!brlNetWorth && (brlNetWorth.unknownBankAccounts > 0 || brlNetWorth.unknownInvestments > 0 || brlNetWorth.unknownBenefitWallets > 0);
+  const totalProventosByCurrency = proventos.reduce<Record<string, number>>((totals, item) => {
+    const code = ativos.find((asset) => asset.id === item.ativo_id)?.currency_code;
+    if (code) totals[code] = (totals[code] ?? 0) + Number(item.valor);
+    return totals;
+  }, {});
+  const totalProventosLabel = currencySummary(totalProventosByCurrency);
 
   // Rendimento mensal estimado (soma de saldo_atual × rentabilidade_mensal_pct / 100)
   const rendimentoMensal = useMemo(
     () =>
       ativos.reduce(
-        (s, a) => s + ((Number(a.saldo_atual) || 0) * (Number(a.rentabilidade_mensal_pct) || 0)) / 100,
+        (s, a) => s + (a.current_value_known && a.currency_code === "BRL"
+          ? ((Number(a.saldo_atual) || 0) * (Number(a.rentabilidade_mensal_pct) || 0)) / 100
+          : 0),
         0,
       ),
     [ativos],
   );
+  const totalInvestimentoAtualBRL = ativos
+    .filter((asset) => asset.current_value_known && asset.currency_code === "BRL")
+    .reduce((sum, asset) => sum + Number(asset.saldo_atual), 0);
 
   // Historical chart data
   const histData = useMemo(() => {
@@ -117,7 +150,6 @@ function VisaoGeralPage() {
       label: monthLabel(m.year, m.month),
       saldoMensal: m.saldo,
       saldoAcumulado: m.saldoAcumulado,
-      patrimonioTotal: m.patrimonioTotal,
     }));
   }, [monthly]);
 
@@ -134,21 +166,15 @@ function VisaoGeralPage() {
       modoContribuicao === "manual" && !Number.isNaN(manualNum)
         ? manualNum
         : autoBase;
-    const rate = totalInvestido > 0 ? rendimentoMensal / totalInvestido : 0;
-
-    const real = histData.map((d) => ({
-      label: d.label,
-      real: d.patrimonioTotal,
-      proj: null as number | null,
-    }));
-
-    const lastReal = histData.length > 0 ? histData[histData.length - 1].patrimonioTotal : patrimonioTotal;
-    let patrimonio = lastReal;
+    const lastReal = patrimonioTotal;
+    const investmentStart = brlNetWorth ? Number(BigInt(brlNetWorth.investmentValueCents)) / 100 : 0;
+    const fixedComponents = lastReal - investmentStart;
+    let projectedInvestments = investmentStart;
+    let projectedBudgetResults = 0;
 
     const proj: Array<{ label: string; real: number | null; proj: number }> = [];
-    if (real.length > 0) {
-      proj.push({ label: real[real.length - 1].label, real: lastReal, proj: lastReal });
-    }
+    if (brlNetWorth) proj.push({ label: "Atual", real: lastReal, proj: lastReal });
+    const rate = totalInvestimentoAtualBRL > 0 ? rendimentoMensal / totalInvestimentoAtualBRL : 0;
 
     const now = new Date();
     let y = monthly.length > 0 ? monthly[monthly.length - 1].year : now.getFullYear();
@@ -156,13 +182,15 @@ function VisaoGeralPage() {
     for (let i = 0; i < horizon; i++) {
       mo += 1;
       if (mo > 12) { mo = 1; y += 1; }
-      patrimonio = patrimonio * (1 + rate) + base;
-      proj.push({ label: monthLabel(y, mo), real: null, proj: patrimonio });
+      projectedInvestments *= 1 + rate;
+      projectedBudgetResults += base;
+      const projectedNetWorth = fixedComponents + projectedInvestments + projectedBudgetResults;
+      proj.push({ label: monthLabel(y, mo), real: null, proj: projectedNetWorth });
     }
 
-    const merged = [...real.slice(0, -1), ...proj];
-    return { data: merged, base, finalValue: patrimonio, rate };
-  }, [monthly, histData, patrimonioTotal, totalInvestido, rendimentoMensal, horizon, modoContribuicao, saldoMensalFixo]);
+    const finalValue = proj[proj.length - 1]?.proj ?? lastReal;
+    return { data: proj, base, finalValue, rate };
+  }, [monthly, patrimonioTotal, brlNetWorth, totalInvestimentoAtualBRL, rendimentoMensal, horizon, modoContribuicao, saldoMensalFixo]);
 
   const ganhoProjetado = projData.finalValue - patrimonioTotal;
 
@@ -203,7 +231,9 @@ function VisaoGeralPage() {
         <section className="mb-8" aria-labelledby="flow-title">
           <h2 id="flow-title" className="text-lg font-bold">Fluxo financeiro</h2>
           <p className="mb-4 text-sm text-muted-foreground">
-            {latestMonth ? `Último mês com lançamentos: ${monthLabel(latestMonth.year, latestMonth.month)}` : "Último mês com lançamentos"}
+            {latestMonth
+              ? `Último ciclo com lançamentos: ${formatFinancialCycleRange(getFinancialCycle(`${latestMonth.year}-${String(latestMonth.month).padStart(2, "0")}-02`))}`
+              : "Último ciclo com lançamentos"}
           </p>
           {patrimonyLoading ? (
             <p className="text-sm text-muted-foreground">Carregando lançamentos...</p>
@@ -223,14 +253,47 @@ function VisaoGeralPage() {
           <div className="max-w-sm">
             <SummaryCard label="Saldo acumulado dos lançamentos" value={saldoAcumulado} tone="primary" />
           </div>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {netWorth.map((row) => (
+              <div key={row.currencyCode} className="finance-metric">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Caixa conhecido em contas · {row.currencyCode}</div>
+                <div className="finance-value mt-2 text-xl font-semibold text-primary">{formatCents(BigInt(row.bankCashCents), row.currencyCode)}</div>
+                {row.unknownBankAccounts > 0 && <div className="mt-1 text-xs text-amber-700 dark:text-amber-300">{row.unknownBankAccounts} conta(s) ativa(s) sem abertura conhecida; total parcial.</div>}
+              </div>
+            ))}
+          </div>
+          {integratedSnapshot?.accounts.filter((account) => account.accountType !== "benefit_wallet").length ? <div className="mt-3 max-w-2xl rounded-xl border border-border p-3"><div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contas ativas · calculadas em {integratedSnapshot.asOfDate}</div><ul className="space-y-1.5">{integratedSnapshot.accounts.filter((account) => account.accountType !== "benefit_wallet").map((account) => <li key={account.id} className="flex justify-between gap-3 text-sm"><span>{account.name} · {account.currencyCode}</span><span>{account.calculatedBalance === null ? "Saldo desconhecido" : formatCents(decimalToCents(account.calculatedBalance), account.currencyCode)}</span></li>)}</ul></div> : null}
+        </section>
+
+        <section className="mb-8 grid gap-4 lg:grid-cols-2" aria-label="Visão financeira integrada">
+          <div className="finance-metric">
+            <h2 className="mb-1 text-lg font-bold">Benefícios · VA</h2>
+            <p className="mb-3 text-xs text-muted-foreground">Carteiras de benefício separadas do dinheiro bancário · saldos em {integratedSnapshot?.asOfDate ?? "—"}</p>
+            {integratedLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : (integratedSnapshot?.accounts.filter((account) => account.accountType === "benefit_wallet") ?? []).length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma carteira VA ativa.</p> : <ul className="space-y-2">{integratedSnapshot?.accounts.filter((account) => account.accountType === "benefit_wallet").map((account) => <li key={account.id} className="flex justify-between gap-3 text-sm"><span>{account.name}</span><span className="font-semibold">{account.calculatedBalance === null ? "Saldo desconhecido" : formatCents(decimalToCents(account.calculatedBalance), account.currencyCode)}</span></li>)}</ul>}
+          </div>
+          <div className="finance-metric">
+            <h2 className="mb-1 text-lg font-bold">Cartões · obrigações abertas</h2>
+            <p className="mb-3 text-xs text-muted-foreground">Pagamentos registrados reduzem o saldo devido. Esta lista não cria movimentos para diferenças.</p>
+            {integratedLoading ? <p className="text-sm text-muted-foreground">Carregando…</p> : !integratedSnapshot?.invoices.length ? <p className="text-sm text-muted-foreground">Nenhuma fatura com saldo em aberto.</p> : <ul className="space-y-2">{integratedSnapshot.invoices.slice(0, 8).map((invoice) => <li key={invoice.id} className="flex flex-wrap justify-between gap-x-3 gap-y-1 border-b border-border/60 pb-2 text-sm"><span>{invoice.cardName} · {invoice.status}{invoice.dueDate ? ` · vence ${invoice.dueDate.split("-").reverse().join("/")}` : " · vencimento desconhecido"}<span className="block text-xs text-muted-foreground">Total {invoice.totalAmount} · pago {invoice.paidAmount} · período {invoice.periodStart} a {invoice.periodEnd}</span></span><strong>{formatCents(decimalToCents(invoice.remainingAmount), invoice.currencyCode)}</strong></li>)}</ul>}
+          </div>
         </section>
 
         <section className="mb-8" aria-labelledby="patrimony-title">
           <h2 id="patrimony-title" className="mb-4 text-lg font-bold">Patrimônio</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 [&>*:last-child]:col-span-2 sm:[&>*:last-child]:col-span-1">
-            <SummaryCard label="Total investido" value={totalInvestido} tone="secondary" />
-            <SummaryCard label="Proventos recebidos" value={totalProventos} tone="primary" />
-            <SummaryCard label="Patrimônio total" value={patrimonioTotal} tone="primary" emphasize />
+            <SummaryCard label="Aportes históricos (custo)" value={totalInvestidoLabel} tone="secondary" />
+            <SummaryCard label="Proventos registrados" value={totalProventosLabel} tone="primary" />
+            {netWorth.map((row) => (
+              <div key={row.currencyCode} className="finance-metric border-l-2 border-primary pl-4">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Patrimônio líquido conhecido · {row.currencyCode}</div>
+                <div className="finance-value mt-2 text-2xl font-semibold text-primary">{formatCents(BigInt(row.netWorthCents), row.currencyCode)}</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Caixa {formatCents(BigInt(row.bankCashCents), row.currencyCode)} + investimentos {formatCents(BigInt(row.investmentValueCents), row.currencyCode)} + VA separado {formatCents(BigInt(row.benefitBalanceCents), row.currencyCode)} − faturas abertas {formatCents(BigInt(row.invoiceLiabilitiesCents), row.currencyCode)}
+                </div>
+                {(row.unknownBankAccounts + row.unknownInvestments + row.unknownBenefitWallets > 0) && <div className="mt-1 text-xs text-amber-700 dark:text-amber-300">Total parcial: há componentes sem saldo ou valor atual conhecido.</div>}
+              </div>
+            ))}
+            {netWorthLoading && <p className="text-sm text-muted-foreground">Calculando saldos e passivos conhecidos…</p>}
           </div>
         </section>
 
@@ -241,7 +304,7 @@ function VisaoGeralPage() {
               Evolução financeira
             </div>
             <div className="mt-1 text-sm text-muted-foreground">
-              Evolução mês a mês — saldo mensal, acumulado e patrimônio.
+              Evolução ciclo a ciclo — cada ciclo vai do dia 2 ao dia 1 seguinte.
             </div>
           </div>
           {histData.length === 0 ? (
@@ -261,13 +324,13 @@ function VisaoGeralPage() {
                     }}
                     formatter={(v: number) => brl.format(Number(v))}
                   />
-                  <Bar dataKey="saldoMensal" name="Saldo do mês" fill="var(--color-secondary)" opacity={0.7} radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="saldoMensal" name="Saldo do ciclo" fill="var(--color-secondary)" opacity={0.7} radius={[6, 6, 0, 0]} />
                   <Line type="monotone" dataKey="saldoAcumulado" name="Saldo acumulado" stroke="var(--color-primary)" strokeWidth={2.5} dot={{ r: 3 }} />
-                  <Line type="monotone" dataKey="patrimonioTotal" name="Patrimônio total" stroke="var(--color-accent)" strokeWidth={2.5} dot={{ r: 3 }} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
           )}
+          <p className="mt-3 text-xs text-muted-foreground">O histórico mostra resultados do orçamento. Não há avaliações históricas de mercado e saldos de caixa suficientes para reconstruir patrimônio passado.</p>
         </section>
 
         {/* Investimentos */}
@@ -296,7 +359,7 @@ function VisaoGeralPage() {
                   <tr className="text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     <th className="px-3 py-3">Ativo</th>
                     <th className="px-3 py-3">Tipo</th>
-                    <th className="px-3 py-3 text-right">Saldo Atual (R$)</th>
+                    <th className="px-3 py-3 text-right">Valor atual informado</th>
                     <th className="px-3 py-3 text-right">Rentab. mensal (%)</th>
                   </tr>
                 </thead>
@@ -305,7 +368,7 @@ function VisaoGeralPage() {
                     <tr key={a.id} className="border-t border-border/60">
                       <td className="px-3 py-2 font-medium">{a.nome}</td>
                       <td className="px-3 py-2 text-muted-foreground capitalize">{a.tipo.replace("_", " ")}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{brl.format(Number(a.saldo_atual))}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{a.current_value_known ? `${new Intl.NumberFormat("pt-BR", { style: "currency", currency: a.currency_code }).format(Number(a.saldo_atual))} · ${a.current_value_date ?? "data não informada"}` : "Desconhecido"}</td>
                       <td className="px-3 py-2 text-right tabular-nums">{Number(a.rentabilidade_mensal_pct).toFixed(2)}%</td>
                     </tr>
                   ))}
@@ -395,7 +458,9 @@ function VisaoGeralPage() {
             </div>
           </div>
 
-          {monthly.length === 0 ? (
+          {!brlNetWorth || netWorthLoading ? (
+            <EmptyChart text="Informe saldos iniciais e valores atuais para gerar uma projeção patrimonial conhecida em BRL." />
+          ) : monthly.length === 0 ? (
             <EmptyChart text="Lance ao menos um mês na Conferência para gerar a projeção." />
           ) : (
             <div className="h-56 w-full sm:h-80">
@@ -437,16 +502,13 @@ function VisaoGeralPage() {
               </ResponsiveContainer>
             </div>
           )}
+          {netWorthIncomplete && <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">A projeção parte de um patrimônio parcial, pois há contas ou investimentos sem valor conhecido.</p>}
 
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+          {brlNetWorth && <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
             <SummaryCard label="Patrimônio projetado" value={projData.finalValue} tone="primary" emphasize />
             <SummaryCard label="Ganho projetado" value={ganhoProjetado} tone={ganhoProjetado >= 0 ? "primary" : "danger"} />
-            <SummaryCard
-              label={modoContribuicao === "manual" ? "Saldo mensal fixo" : "Contribuição média mensal"}
-              value={projData.base}
-              tone="secondary"
-            />
-          </div>
+            <SummaryCard label={modoContribuicao === "manual" ? "Saldo mensal fixo" : "Contribuição média mensal"} value={projData.base} tone="secondary" />
+          </div>}
         </section>
       </div>
       <MobileNav />
@@ -461,7 +523,7 @@ function SummaryCard({
   emphasize,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   tone: "primary" | "secondary" | "danger";
   emphasize?: boolean;
 }) {
@@ -474,7 +536,7 @@ function SummaryCard({
       }`}
     >
       <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`finance-value mt-2 text-2xl font-semibold sm:text-3xl ${color}`}>{brl.format(value)}</div>
+      <div className={`finance-value mt-2 break-words text-2xl font-semibold sm:text-3xl ${color}`}>{typeof value === "number" ? brl.format(value) : value}</div>
     </div>
   );
 }

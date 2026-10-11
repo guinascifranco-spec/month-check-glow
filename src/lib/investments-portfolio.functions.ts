@@ -22,12 +22,13 @@ export const listAtivos = createServerFn({ method: "GET" })
 
 export const createAtivo = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { tipo: string; nome: string; corretora?: string | null }) =>
+  .inputValidator((d: { tipo: string; nome: string; corretora?: string | null; currency_code?: string }) =>
     z
       .object({
         tipo: z.enum(ASSET_TYPES),
         nome: z.string().trim().min(1).max(120),
         corretora: z.string().trim().max(120).nullable().optional(),
+        currency_code: z.string().regex(/^[A-Z]{3}$/).default("BRL"),
       })
       .parse(d),
   )
@@ -40,6 +41,7 @@ export const createAtivo = createServerFn({ method: "POST" })
         tipo: data.tipo,
         nome: data.nome,
         corretora: data.corretora || null,
+        currency_code: data.currency_code,
       })
       .select("*")
       .single();
@@ -59,6 +61,100 @@ export const deleteAtivo = createServerFn({ method: "POST" })
       .eq("user_id", userId);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+export const updateAtivoCurrentValue = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      current_value: z.string().regex(/^\d+(?:\.\d{1,2})?$/),
+      current_value_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      note: z.string().max(500).optional(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: id, error } = await context.supabase.rpc("record_investment_valuation", {
+      p_asset_id: data.id, p_market_value_text: data.current_value,
+      p_reference_date: data.current_value_date, p_note: data.note ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return { id };
+  });
+
+const cashOperationInput = z.object({
+  ativo_id: z.string().uuid(),
+  account_id: z.string().uuid(),
+  effective_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  description: z.string().trim().min(1).max(160),
+  idempotency_key: z.string().uuid(),
+});
+
+export const createCashLinkedContribution = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => cashOperationInput.extend({
+    quantity: z.string().regex(/^\d+(?:\.\d{1,8})?$/),
+    unit_price: z.string().regex(/^\d+(?:\.\d{1,8})?$/),
+    fees: z.string().regex(/^\d+(?:\.\d{1,2})?$/),
+    provento_id: z.string().uuid().optional(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: id, error } = await context.supabase.rpc("record_investment_contribution", {
+      p_asset_id: data.ativo_id,
+      p_account_id: data.account_id,
+      p_effective_date: data.effective_date,
+      p_quantity_text: data.quantity,
+      p_unit_price_text: data.unit_price,
+      p_fees_text: data.fees,
+      p_description: data.description,
+      p_idempotency_key: data.idempotency_key,
+      p_provento_id: data.provento_id ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return { id };
+  });
+
+export const createInvestmentRedemption = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => cashOperationInput.extend({ amount: z.string().regex(/^\d+(?:\.\d{1,2})?$/) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: id, error } = await context.supabase.rpc("record_investment_redemption", {
+      p_asset_id: data.ativo_id,
+      p_account_id: data.account_id,
+      p_effective_date: data.effective_date,
+      p_amount_text: data.amount,
+      p_description: data.description,
+      p_idempotency_key: data.idempotency_key,
+    });
+    if (error) throw new Error(error.message);
+    return { id };
+  });
+
+export const recordInvestmentDividendReceipt = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    ativo_id: z.string().uuid(), provento_id: z.string().uuid(), account_id: z.string().uuid(),
+    idempotency_key: z.string().uuid(),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: id, error } = await context.supabase.rpc("record_investment_dividend_receipt", {
+      p_asset_id: data.ativo_id, p_provento_id: data.provento_id, p_account_id: data.account_id,
+      p_idempotency_key: data.idempotency_key,
+    });
+    if (error) throw new Error(error.message);
+    return { id };
+  });
+
+export const listInvestmentCashOperations = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("investment_cash_operations")
+      .select("id, asset_id, operation_type, effective_date, amount, currency_code, description, aporte_id, provento_id")
+      .eq("user_id", context.userId)
+      .order("effective_date", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
   });
 
 // ----- Aportes -----

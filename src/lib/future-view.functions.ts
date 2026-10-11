@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { personalContribution } from "./personal-finance";
+import { getFinancialCycle } from "./financial-cycle";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type MonthKey = `${number}-${string}`;
@@ -12,10 +13,6 @@ type ProjectionEvent = {
   title: string;
   message: string;
 };
-
-function monthKey(year: number, month: number): MonthKey {
-  return `${year}-${String(month).padStart(2, "0")}`;
-}
 
 function shiftMonth(year: number, month: number, amount: number) {
   const date = new Date(year, month - 1 + amount, 1);
@@ -37,8 +34,9 @@ export const getFutureProjection = createServerFn({ method: "POST" })
       await Promise.all([
         supabase
           .from("month_check_rows")
-          .select("year, month, descricao, tipo, valor, expense_class, invoice_responsibility, invoice_personal_value, invoice_payment")
+          .select("year, month, transaction_date, descricao, tipo, valor, expense_class, invoice_responsibility, invoice_personal_value, invoice_payment")
           .eq("user_id", userId)
+          .not("transaction_date", "is", null)
           .order("year", { ascending: true })
           .order("month", { ascending: true }),
         supabase
@@ -51,6 +49,9 @@ export const getFutureProjection = createServerFn({ method: "POST" })
     if (rowsError) throw new Error(rowsError.message);
     if (installmentsError) throw new Error(installmentsError.message);
 
+    // Historical actuals are grouped by financial cycle. The future schedule
+    // below remains calendar-month based because installments and projection
+    // horizons are explicitly maintained and displayed by calendar month.
     const now = new Date();
     const startYear = now.getFullYear();
     const startMonth = now.getMonth() + 1;
@@ -58,10 +59,11 @@ export const getFutureProjection = createServerFn({ method: "POST" })
     const latestFixed = new Map<string, { order: number; valor: number }>();
 
     for (const row of rows ?? []) {
+      if (!row.transaction_date) continue;
       const contribution = personalContribution(row);
       if (!contribution.active) continue;
       const value = contribution.income + Math.abs(contribution.expense);
-      const key = monthKey(row.year, row.month);
+      const key = getFinancialCycle(row.transaction_date).startInclusive.slice(0, 7) as MonthKey;
       const current = byMonth.get(key) ?? { renda: 0, variaveis: 0, hasValue: false };
       if (value > 0) current.hasValue = true;
       current.renda += contribution.income;
@@ -70,7 +72,8 @@ export const getFutureProjection = createServerFn({ method: "POST" })
 
       if (contribution.expense !== 0 && row.expense_class === "fixo") {
         const normalized = row.descricao.trim().toLocaleLowerCase("pt-BR") || `sem-nome-${key}`;
-        const order = row.year * 12 + row.month;
+        const [cycleYear, cycleMonth] = key.split("-").map(Number);
+        const order = cycleYear * 12 + cycleMonth;
         const previous = latestFixed.get(normalized);
         if (!previous || order >= previous.order) latestFixed.set(normalized, { order, valor: contribution.expense });
       }
@@ -85,6 +88,17 @@ export const getFutureProjection = createServerFn({ method: "POST" })
           : sum;
       }, 0);
 
+    const installmentAmountForCycle = (year: number, month: number) =>
+      (installments ?? []).reduce((sum, item) => {
+        const [firstYear, firstMonth, firstDay] = item.first_date.split("-").map(Number);
+        // A scheduled payment on day 1 belongs to the cycle that started last month.
+        const dueMonth = firstDay === 1 ? shiftMonth(year, month, 1) : { year, month };
+        const offset = monthDistance(firstYear, firstMonth, dueMonth.year, dueMonth.month);
+        return offset >= 0 && offset < item.total_installments
+          ? sum + (Number(item.installment_value) || 0)
+          : sum;
+      }, 0);
+
     const historical = [...byMonth.entries()]
       .filter(([, value]) => value.hasValue)
       .sort(([a], [b]) => a.localeCompare(b))
@@ -93,7 +107,7 @@ export const getFutureProjection = createServerFn({ method: "POST" })
     const averageIncome = historical.reduce((sum, [, item]) => sum + item.renda, 0) / divisor;
     const averageVariables = historical.reduce((sum, [key, item]) => {
       const [year, month] = key.split("-").map(Number);
-      return sum + Math.max(0, item.variaveis - installmentAmountFor(year, month));
+      return sum + Math.max(0, item.variaveis - installmentAmountForCycle(year, month));
     }, 0) / divisor;
     const fixed = [...latestFixed.values()].reduce((sum, item) => sum + item.valor, 0);
 

@@ -21,9 +21,22 @@ export const exportBackup = createServerFn({ method: "GET" })
       installments,
       expenseCategories,
       categoryRules,
+      financialAccounts,
+      financialMovements,
+      financialTransfers,
+      creditCards,
+      creditCardInvoices,
+      creditCardPayments,
+      creditCardInvoiceItems,
+      benefitWalletEvents,
       ativos,
       aportes,
       proventos,
+      investmentCashOperations,
+      accountReconciliations,
+      investmentValuations,
+      investmentOperationReversals,
+      financialTransferCancellations,
     ] = await Promise.all([
       // month_check_rows — tabela de Lançamentos (e dados históricos da Conferência)
       supabase
@@ -76,6 +89,49 @@ export const exportBackup = createServerFn({ method: "GET" })
         .select("*")
         .eq("user_id", userId),
 
+      // financial_accounts — contas e saldos iniciais informados
+      supabase
+        .from("financial_accounts")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true }),
+
+      // financial_movements and financial_transfers — independent cash ledger
+      supabase
+        .from("financial_movements")
+        .select("*")
+        .eq("user_id", userId)
+        .order("effective_date", { ascending: true }),
+      supabase
+        .from("financial_transfers")
+        .select("*")
+        .eq("user_id", userId)
+        .order("effective_date", { ascending: true }),
+
+      supabase.from("credit_cards").select("*").eq("user_id", userId).order("name"),
+      supabase
+        .from("credit_card_invoices")
+        .select("*")
+        .eq("user_id", userId)
+        .order("period_start", { ascending: true }),
+      supabase
+        .from("credit_card_payments")
+        .select("*")
+        .eq("user_id", userId)
+        .order("effective_date", { ascending: true }),
+      supabase
+        .from("credit_card_invoice_items")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true }),
+
+      // benefit_wallet_events — semântica VA e vínculo explícito ao orçamento
+      supabase
+        .from("benefit_wallet_events")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: true }),
+
       // ativos
       supabase
         .from("ativos")
@@ -97,6 +153,15 @@ export const exportBackup = createServerFn({ method: "GET" })
         .select("*")
         .eq("user_id", userId)
         .order("data_recebimento", { ascending: true }),
+      supabase
+        .from("investment_cash_operations")
+        .select("*")
+        .eq("user_id", userId)
+        .order("effective_date", { ascending: true }),
+      supabase.from("financial_account_reconciliations").select("*").eq("user_id", userId).order("reference_date", { ascending: true }),
+      supabase.from("investment_valuations").select("*").eq("user_id", userId).order("reference_date", { ascending: true }),
+      supabase.from("investment_operation_reversals").select("*").eq("user_id", userId).order("effective_date", { ascending: true }),
+      supabase.from("financial_transfer_cancellations").select("*").eq("user_id", userId).order("created_at", { ascending: true }),
     ]);
 
     // Verificar erros
@@ -108,9 +173,22 @@ export const exportBackup = createServerFn({ method: "GET" })
       installments.error,
       expenseCategories.error,
       categoryRules.error,
+      financialAccounts.error,
+      financialMovements.error,
+      financialTransfers.error,
+      creditCards.error,
+      creditCardInvoices.error,
+      creditCardPayments.error,
+      creditCardInvoiceItems.error,
+      benefitWalletEvents.error,
       ativos.error,
       aportes.error,
       proventos.error,
+      investmentCashOperations.error,
+      accountReconciliations.error,
+      investmentValuations.error,
+      investmentOperationReversals.error,
+      financialTransferCancellations.error,
     ].filter(Boolean);
 
     if (errors.length > 0) {
@@ -130,9 +208,22 @@ export const exportBackup = createServerFn({ method: "GET" })
         installments: installments.data?.length ?? 0,
         expense_categories: expenseCategories.data?.length ?? 0,
         category_rules: categoryRules.data?.length ?? 0,
+        financial_accounts: financialAccounts.data?.length ?? 0,
+        financial_movements: financialMovements.data?.length ?? 0,
+        financial_transfers: financialTransfers.data?.length ?? 0,
+        credit_cards: creditCards.data?.length ?? 0,
+        credit_card_invoices: creditCardInvoices.data?.length ?? 0,
+        credit_card_payments: creditCardPayments.data?.length ?? 0,
+        credit_card_invoice_items: creditCardInvoiceItems.data?.length ?? 0,
+        benefit_wallet_events: benefitWalletEvents.data?.length ?? 0,
         ativos: ativos.data?.length ?? 0,
         aportes: aportes.data?.length ?? 0,
         proventos: proventos.data?.length ?? 0,
+        investment_cash_operations: investmentCashOperations.data?.length ?? 0,
+        financial_account_reconciliations: accountReconciliations.data?.length ?? 0,
+        investment_valuations: investmentValuations.data?.length ?? 0,
+        investment_operation_reversals: investmentOperationReversals.data?.length ?? 0,
+        financial_transfer_cancellations: financialTransferCancellations.data?.length ?? 0,
       },
       tables: {
         month_check_rows: monthCheckRows.data ?? [],
@@ -142,9 +233,22 @@ export const exportBackup = createServerFn({ method: "GET" })
         installments: installments.data ?? [],
         expense_categories: expenseCategories.data ?? [],
         category_rules: categoryRules.data ?? [],
+        financial_accounts: financialAccounts.data ?? [],
+        financial_movements: financialMovements.data ?? [],
+        financial_transfers: financialTransfers.data ?? [],
+        credit_cards: creditCards.data ?? [],
+        credit_card_invoices: creditCardInvoices.data ?? [],
+        credit_card_payments: creditCardPayments.data ?? [],
+        credit_card_invoice_items: creditCardInvoiceItems.data ?? [],
+        benefit_wallet_events: benefitWalletEvents.data ?? [],
         ativos: ativos.data ?? [],
         aportes: aportes.data ?? [],
         proventos: proventos.data ?? [],
+        investment_cash_operations: investmentCashOperations.data ?? [],
+        financial_account_reconciliations: accountReconciliations.data ?? [],
+        investment_valuations: investmentValuations.data ?? [],
+        investment_operation_reversals: investmentOperationReversals.data ?? [],
+        financial_transfer_cancellations: financialTransferCancellations.data ?? [],
       },
     };
   });
