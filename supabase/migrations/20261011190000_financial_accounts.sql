@@ -1,6 +1,6 @@
 CREATE TABLE public.financial_accounts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
   name text NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 80),
   account_type text NOT NULL CHECK (account_type IN ('bank_account', 'wallet', 'other')),
   currency_code text NOT NULL DEFAULT 'BRL' CHECK (currency_code ~ '^[A-Z]{3}$'),

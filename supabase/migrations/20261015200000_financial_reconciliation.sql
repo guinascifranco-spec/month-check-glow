@@ -5,7 +5,7 @@ ALTER TABLE public.investment_cash_operations
 
 CREATE TABLE public.financial_account_reconciliations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
   account_id uuid NOT NULL,
   account_type text NOT NULL,
   currency_code text NOT NULL CHECK (currency_code ~ '^[A-Z]{3}$'),
@@ -34,7 +34,7 @@ CREATE POLICY "Users select own account reconciliations" ON public.financial_acc
 
 CREATE TABLE public.financial_transfer_cancellations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
   transfer_id uuid NOT NULL,
   reason text NOT NULL CHECK (length(trim(reason)) BETWEEN 1 AND 500),
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -122,7 +122,7 @@ $$;
 
 CREATE TABLE public.investment_valuations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
   asset_id uuid NOT NULL,
   market_value numeric(14,2) NOT NULL CHECK (market_value >= 0),
   currency_code text NOT NULL CHECK (currency_code ~ '^[A-Z]{3}$'),
@@ -188,7 +188,7 @@ $$;
 
 CREATE TABLE public.investment_operation_reversals (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
   source_operation_id uuid NOT NULL,
   compensating_movement_id uuid NOT NULL,
   reason text NOT NULL CHECK (length(trim(reason)) BETWEEN 1 AND 500),
@@ -206,6 +206,18 @@ GRANT SELECT ON public.investment_operation_reversals TO authenticated;
 GRANT ALL ON public.investment_operation_reversals TO service_role;
 CREATE POLICY "Users select own investment reversals" ON public.investment_operation_reversals
   FOR SELECT TO authenticated USING (auth.uid() = user_id);
+
+CREATE OR REPLACE FUNCTION public.guard_investment_linked_cash_movement()
+RETURNS trigger LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.investment_cash_operations WHERE financial_movement_id = OLD.id)
+    OR EXISTS (SELECT 1 FROM public.investment_operation_reversals WHERE compensating_movement_id = OLD.id) THEN
+    RAISE EXCEPTION 'Investment-linked cash movements cannot be edited or deleted independently';
+  END IF;
+  IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+  RETURN NEW;
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION public.reverse_investment_cash_operation(
   p_operation_id uuid, p_effective_date date, p_reason text
@@ -227,6 +239,8 @@ BEGIN
   SELECT m.account_id INTO cash_account_id FROM public.financial_movements m
     WHERE m.id = source.financial_movement_id AND m.user_id = uid;
   IF cash_account_id IS NULL THEN RAISE EXCEPTION 'Source cash movement is unavailable'; END IF;
+  PERFORM 1 FROM public.ativos WHERE id = source.asset_id AND user_id = uid FOR UPDATE;
+  PERFORM 1 FROM public.financial_accounts WHERE id = cash_account_id AND user_id = uid FOR UPDATE;
   SELECT CASE movement_type WHEN 'income' THEN 'expense' WHEN 'expense' THEN 'income' END
     INTO opposite_type FROM public.financial_movements WHERE id = source.financial_movement_id AND user_id = uid;
   IF opposite_type IS NULL THEN RAISE EXCEPTION 'Unsupported source movement type'; END IF;
@@ -254,3 +268,14 @@ GRANT EXECUTE ON FUNCTION public.record_investment_valuation(uuid, text, date, t
 GRANT EXECUTE ON FUNCTION public.list_investment_valuations(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.reverse_investment_cash_operation(uuid, date, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.cancel_financial_transfer_with_reason(uuid, text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.guard_investment_reversal_record()
+RETURNS trigger LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+BEGIN
+  RAISE EXCEPTION 'Investment reversals are immutable audit records';
+END;
+$$;
+CREATE TRIGGER investment_reversals_immutable
+  BEFORE UPDATE OR DELETE ON public.investment_operation_reversals
+  FOR EACH ROW EXECUTE FUNCTION public.guard_investment_reversal_record();
+REVOKE ALL ON FUNCTION public.guard_investment_reversal_record() FROM PUBLIC;

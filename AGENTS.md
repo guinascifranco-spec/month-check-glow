@@ -7,3 +7,5 @@
 - Invoice imports use owner-scoped atomic RPC with original-file hash and original line index, plus optional metadata on existing transactions; this preserves reviewed installments without creating future schedules or duplicating confirmed imports.
 - Persist terminal AI access blocks server-side and require explicit restoration before fresh analysis; this prevents repeated billed requests during account or provider denials.
 - Keep invoice integral values for reconciliation and deduplication; use personalContribution for all consumption metrics, classifying invoice credits as expense offsets and explicit invoice payments as neutral, while null responsibility preserves legacy behavior.
+- Financial SQL regressions must run only against a disposable local PostgreSQL cluster with an explicit socket and port; this prevents tests from reaching the connected production database.
+- Investment retries compare a normalized stored request under a per-owner/key transaction lock; this rejects key reuse with different parameters without duplicating cash activity.

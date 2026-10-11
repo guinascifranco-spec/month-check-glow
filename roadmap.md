@@ -1,3 +1,9 @@
+# Correção consolidada financeira — sem implantação
+
+- [ ] Corrigir migrações financeiras e preservar definições legadas
+- [ ] Testar sequência e integridade em PostgreSQL temporário isolado
+- [ ] Executar regressões e registrar relatório para aprovação
+
 # Visão Futura
 
 # Analisar fatura
