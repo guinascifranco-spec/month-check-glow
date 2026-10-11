@@ -1,10 +1,12 @@
 """Runs real SQL only in a newly initialized, disposable LOCAL PostgreSQL cluster.
 
 Usage: python3 tests/financial-migrations/run.py
+Local hypothesis only: add --probe-parent-write (does not fix repository migrations).
 Requires initdb, pg_ctl, psql; root runs the cluster as the sandbox's lovable user.
 No application connection configuration, credentials, or production data are used.
 """
 from pathlib import Path
+import argparse
 import concurrent.futures
 import os
 import pwd
@@ -29,6 +31,10 @@ port = '55439'
 connection = ['psql', '-X', '-h', str(workspace), '-p', port, '-U', 'lovable' if prefix else pwd.getpwuid(os.getuid()).pw_name,
               '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-qAt']
 passed = 0
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--probe-parent-write', action='store_true',
+                    help='Experiment with a shared-parent write ONLY in the disposable local cluster; never an approval of the repository migrations')
+options = parser.parse_args()
 
 def sql(statement, authenticated=True, failure=None):
     global passed
@@ -79,7 +85,9 @@ def association_race(winner, loser, label, authenticated=True, isolation='READ C
         assert second.returncode != 0 and ('both a credit card and a benefit wallet' in error or 'unlinked expense' in error), error
         print('PASS concurrent association:', label)
     else:
-        print('ISOLATION PROBE:', label, 'loser accepted' if second.returncode == 0 else error.strip())
+        assert second.returncode != 0 and 'could not serialize access due to concurrent update' in error, \
+            f'INTEGRITY BLOCKER: {label}; expected serialization failure, got: {error or "loser accepted"}'
+        print('PASS concurrent association:', label, '/ serialization failure')
     return second.returncode
 
 try:
@@ -98,6 +106,18 @@ try:
     for migration in migrations:
         load(migration)
         print('PASS sequence:', migration.name)
+    if options.probe_parent_write:
+        # Hypothesis in memory only, NOT a migration file or production operation.
+        # Default execution above/below always tests the unmodified repository.
+        definition_result = subprocess.run(connection, input="SELECT pg_get_functiondef('public.guard_exclusive_purchase_link()'::regprocedure);",
+                                           text=True, capture_output=True, env=env)
+        assert definition_result.returncode == 0, definition_result.stderr
+        definition = definition_result.stdout
+        old = "PERFORM 1 FROM public.month_check_rows\n    WHERE id = NEW.month_check_row_id AND user_id = NEW.user_id FOR UPDATE;"
+        new = "UPDATE public.month_check_rows SET id = id\n    WHERE id = NEW.month_check_row_id AND user_id = NEW.user_id;"
+        assert definition.count(old) == 1, 'Probe no longer matches repository guard; do not silently test other SQL'
+        sql(definition.replace(old, new), False)
+        print('EXPERIMENT ONLY: shared parent write installed in disposable cluster; repository migration unchanged')
     assert before == sql("SELECT jsonb_agg(to_jsonb(r) ORDER BY id)::text FROM month_check_rows r;", False)
     expect("SELECT saldo_atual::text FROM ativos LIMIT 1;", '1234.56')
     expect("SELECT count(*) FROM pg_constraint WHERE conname='financial_movements_id_user_id_key';", '1')
@@ -169,22 +189,24 @@ try:
     sql(f"SELECT unlink_benefit_budget_row('{event}');")
     sql(f"SELECT associate_credit_card_invoice_row('{invoice}','{row}');")
     sql(f"SELECT record_benefit_wallet_event('{wallet}','2026-10-07','benefit_purchase','25','Mercado',NULL,'{row}','{key()}');", failure='unlinked expense')
-    for benefit_first in [False, True]:
-        for privileged in [False, True]:
-            race_row = purchase()
-            credit_call = f"SELECT associate_credit_card_invoice_row('{invoice}','{race_row}');"
-            if privileged:
-                credit_call = f"INSERT INTO credit_card_invoice_items(user_id,invoice_id,month_check_row_id) VALUES ('{OWNER}','{invoice}','{race_row}');"
-            benefit_call = f"SELECT record_benefit_wallet_event('{wallet}','2026-10-07','benefit_purchase','25','Mercado',NULL,'{race_row}','{key()}');"
-            association_race(benefit_call if benefit_first else credit_call, credit_call if benefit_first else benefit_call,
-                             ('benefit' if benefit_first else 'card') + (' / privileged' if privileged else ' / authenticated'), not privileged)
-            expect(f"SELECT (SELECT count(*) FROM credit_card_invoice_items WHERE month_check_row_id='{race_row}') + (SELECT count(*) FROM benefit_wallet_events WHERE month_check_row_id='{race_row}');", '1')
-    # Non-default snapshot probe: expose rather than silently hide unsupported isolation.
-    race_row = purchase()
-    credit_call = f"INSERT INTO credit_card_invoice_items(user_id,invoice_id,month_check_row_id) VALUES ('{OWNER}','{invoice}','{race_row}');"
-    benefit_call = f"SELECT record_benefit_wallet_event('{wallet}','2026-10-07','benefit_purchase','25','Mercado',NULL,'{race_row}','{key()}');"
-    association_race(credit_call, benefit_call, 'REPEATABLE READ privileged', False, 'REPEATABLE READ')
-    print('ISOLATION PROBE link count:', sql(f"SELECT (SELECT count(*) FROM credit_card_invoice_items WHERE month_check_row_id='{race_row}') + (SELECT count(*) FROM benefit_wallet_events WHERE month_check_row_id='{race_row}');", False))
+    for isolation in ['READ COMMITTED', 'REPEATABLE READ', 'SERIALIZABLE']:
+        for benefit_first in [False, True]:
+            for privileged in [False, True]:
+                race_row = purchase()
+                credit_call = f"SELECT associate_credit_card_invoice_row('{invoice}','{race_row}');"
+                benefit_call = f"SELECT record_benefit_wallet_event('{wallet}','2026-10-07','benefit_purchase','25','Mercado',NULL,'{race_row}','{key()}');"
+                if privileged:
+                    credit_call = f"INSERT INTO credit_card_invoice_items(user_id,invoice_id,month_check_row_id) VALUES ('{OWNER}','{invoice}','{race_row}');"
+                    benefit_movement = sql(f"SELECT record_benefit_wallet_event('{wallet}','2026-10-07','benefit_purchase','25','Mercado',NULL,NULL,'{key()}');")
+                    # Bypass the RPC's preliminary check: the storage guard must
+                    # also protect a privileged UPDATE introducing a link.
+                    benefit_call = f"UPDATE benefit_wallet_events SET month_check_row_id='{race_row}' WHERE movement_id='{benefit_movement}';"
+                association_race(benefit_call if benefit_first else credit_call, credit_call if benefit_first else benefit_call,
+                                 isolation + (' / benefit first' if benefit_first else ' / card first') +
+                                 (' / privileged' if privileged else ' / authenticated'), not privileged, isolation)
+                expect(f"SELECT (SELECT count(*) FROM credit_card_invoice_items WHERE month_check_row_id='{race_row}') + (SELECT count(*) FROM benefit_wallet_events WHERE month_check_row_id='{race_row}');", '1')
+    # The winner's financial fields must survive the tuple-version write.
+    expect(f"SELECT tipo||':'||valor||':'||transaction_date FROM month_check_rows WHERE id='{race_row}';", 'saida:25:2026-10-07')
     sql(f"SELECT close_credit_card_invoice('{invoice}');")
     sql(f"SELECT record_credit_card_payment('{invoice}','{account}','2026-11-02','50','{key()}');")
     expect(f"SELECT calculated_balance FROM financial_account_balances('2026-11-01') WHERE account_id='{account}';", cash_before)
@@ -192,9 +214,10 @@ try:
     # Owner isolation and no direct writes into operation ledgers.
     sql(f"SET request.jwt.claim.sub='{OTHER}'; SELECT reverse_investment_cash_operation('{contribution}','2026-10-08','Outra conta');", failure='not found')
     sql("INSERT INTO investment_cash_operations DEFAULT VALUES;", failure='permission denied')
-    print(f'PASS {passed} SQL regression assertions; synthetic dependencies and six migrations only; production untouched.')
     dual_links = sql("SELECT count(*) FROM credit_card_invoice_items i JOIN benefit_wallet_events e USING(month_check_row_id);", False)
     assert dual_links == '0', 'INTEGRITY BLOCKER: REPEATABLE READ permitted the same purchase in card and benefit ledgers'
+    print(f'PASS {passed} SQL assertions; 12 concurrent disputes; production untouched.' +
+          (' LOCAL HYPOTHESIS ONLY: repository migration remains blocked/unfixed.' if options.probe_parent_write else ' Repository migrations verified.'))
 finally:
     if data.exists():
         subprocess.run(prefix + ['pg_ctl','-D',str(data),'-m','immediate','stop'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

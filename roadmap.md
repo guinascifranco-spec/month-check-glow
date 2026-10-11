@@ -1,5 +1,11 @@
 # Fechamento das pendências financeiras — sem implantação
 
+## Bloqueios restantes — revisão atual
+
+- [ ] Aplicar correção de concorrência em M4 por fluxo autorizado — edição protegida; hipótese local passou 51 verificações/12 disputas, migração original ainda falha
+- [x] Documentar alternativas de exclusão/retenção sem escolher uma política
+- [x] Conferir a entrada órfã do lockfile sem modificá-lo e registrar resultados reais em financial-blockers-review.md
+
 - [x] Substituir os cinco TODOs por regressões dos comportamentos existentes
 - [x] Alinhar aportes revertidos no histórico e na tela Investimentos
 - [ ] Garantir exclusividade cartão/benefício sob concorrência real — falha REPEATABLE READ reproduzida; migração protegida contra edição sem aplicação
