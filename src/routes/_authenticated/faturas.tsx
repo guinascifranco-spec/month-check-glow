@@ -50,7 +50,14 @@ import {
 import { listFinancialAccounts } from "@/lib/financial-accounts.functions";
 
 export const Route = createFileRoute("/_authenticated/faturas")({
-  head: () => ({ meta: [{ title: "Cartões e faturas — Month Check" }] }),
+  head: () => ({ meta: [
+    { title: "Cartões e faturas — Month Check" },
+    { name: "description", content: "Confira cartões, compras e pagamentos de faturas." },
+    { property: "og:title", content: "Cartões e faturas — Month Check" },
+    { property: "og:description", content: "Confira cartões, compras e pagamentos de faturas." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: CreditCardsPage,
 });
 

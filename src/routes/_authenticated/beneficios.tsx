@@ -45,6 +45,10 @@ export const Route = createFileRoute("/_authenticated/beneficios")({
     meta: [
       { title: "Vale-alimentação — Month Check" },
       { name: "description", content: "Acompanhe créditos e compras feitas com vale-alimentação." },
+      { property: "og:title", content: "Vale-alimentação — Month Check" },
+      { property: "og:description", content: "Acompanhe créditos e compras feitas com vale-alimentação." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: BenefitsPage,

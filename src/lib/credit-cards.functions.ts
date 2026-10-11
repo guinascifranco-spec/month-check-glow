@@ -1,3 +1,4 @@
+import { financialSchema } from "./financial-schema";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -6,7 +7,7 @@ import { creditCardInputSchema, invoiceInputSchema, invoicePaymentSchema } from 
 export const listCreditCards = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase.rpc("list_credit_cards");
+    const { data, error } = await financialSchema(context.supabase).rpc("list_credit_cards");
     if (error) throw new Error(error.message);
     return data ?? [];
   });
@@ -15,7 +16,7 @@ export const saveCreditCard = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => creditCardInputSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { data: id, error } = await context.supabase.rpc("save_credit_card", {
+    const { data: id, error } = await financialSchema(context.supabase).rpc("save_credit_card", {
       p_id: data.id,
       p_name: data.name,
       p_last_four: data.last_four,
@@ -34,7 +35,7 @@ export const setCreditCardActive = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), is_active: z.boolean() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: id, error } = await context.supabase.rpc("set_credit_card_active", {
+    const { data: id, error } = await financialSchema(context.supabase).rpc("set_credit_card_active", {
       p_id: data.id,
       p_is_active: data.is_active,
     });
@@ -45,7 +46,7 @@ export const setCreditCardActive = createServerFn({ method: "POST" })
 export const listCreditCardInvoices = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase.rpc("list_credit_card_invoices");
+    const { data, error } = await financialSchema(context.supabase).rpc("list_credit_card_invoices");
     if (error) throw new Error(error.message);
     return data ?? [];
   });
@@ -54,7 +55,7 @@ export const createCreditCardInvoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => invoiceInputSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { data: id, error } = await context.supabase.rpc("create_credit_card_invoice", {
+    const { data: id, error } = await financialSchema(context.supabase).rpc("create_credit_card_invoice", {
       p_card_id: data.card_id,
       p_period_start: data.period_start,
       p_period_end: data.period_end,
@@ -71,7 +72,7 @@ export const closeCreditCardInvoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ invoice_id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: id, error } = await context.supabase.rpc("close_credit_card_invoice", {
+    const { data: id, error } = await financialSchema(context.supabase).rpc("close_credit_card_invoice", {
       p_invoice_id: data.invoice_id,
     });
     if (error) throw new Error(error.message);
@@ -82,7 +83,7 @@ export const reopenCreditCardInvoice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ invoice_id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: id, error } = await context.supabase.rpc("reopen_credit_card_invoice", {
+    const { data: id, error } = await financialSchema(context.supabase).rpc("reopen_credit_card_invoice", {
       p_invoice_id: data.invoice_id,
     });
     if (error) throw new Error(error.message);
@@ -95,7 +96,7 @@ export const listUnlinkedInvoiceRows = createServerFn({ method: "GET" })
     z.object({ limit: z.number().int().min(1).max(500).default(200) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase.rpc("list_unlinked_invoice_rows", {
+    const { data: rows, error } = await financialSchema(context.supabase).rpc("list_unlinked_invoice_rows", {
       p_limit: data.limit,
     });
     if (error) throw new Error(error.message);
@@ -106,7 +107,7 @@ export const listCreditCardInvoiceItems = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ invoice_id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase.rpc("list_credit_card_invoice_items", {
+    const { data: rows, error } = await financialSchema(context.supabase).rpc("list_credit_card_invoice_items", {
       p_invoice_id: data.invoice_id,
     });
     if (error) throw new Error(error.message);
@@ -119,7 +120,7 @@ export const associateCreditCardInvoiceRow = createServerFn({ method: "POST" })
     z.object({ invoice_id: z.string().uuid(), row_id: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: id, error } = await context.supabase.rpc("associate_credit_card_invoice_row", {
+    const { data: id, error } = await financialSchema(context.supabase).rpc("associate_credit_card_invoice_row", {
       p_invoice_id: data.invoice_id,
       p_row_id: data.row_id,
     });
@@ -133,7 +134,7 @@ export const unlinkCreditCardInvoiceRow = createServerFn({ method: "POST" })
     z.object({ invoice_id: z.string().uuid(), row_id: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: id, error } = await context.supabase.rpc("unlink_credit_card_invoice_row", {
+    const { data: id, error } = await financialSchema(context.supabase).rpc("unlink_credit_card_invoice_row", {
       p_invoice_id: data.invoice_id,
       p_row_id: data.row_id,
     });
@@ -145,7 +146,7 @@ export const recordCreditCardPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => invoicePaymentSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { data: id, error } = await context.supabase.rpc("record_credit_card_payment", {
+    const { data: id, error } = await financialSchema(context.supabase).rpc("record_credit_card_payment", {
       p_invoice_id: data.invoice_id,
       p_account_id: data.account_id,
       p_effective_date: data.effective_date,
@@ -160,7 +161,7 @@ export const listCreditCardPayments = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ invoice_id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase.rpc("list_credit_card_payments", {
+    const { data: rows, error } = await financialSchema(context.supabase).rpc("list_credit_card_payments", {
       p_invoice_id: data.invoice_id,
     });
     if (error) throw new Error(error.message);

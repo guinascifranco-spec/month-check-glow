@@ -40,6 +40,10 @@ export const Route = createFileRoute("/_authenticated/contas")({
     meta: [
       { title: "Contas — Month Check" },
       { name: "description", content: "Cadastre contas e saldos iniciais informados." },
+      { property: "og:title", content: "Contas — Month Check" },
+      { property: "og:description", content: "Cadastre contas e saldos iniciais informados." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AccountsPage,

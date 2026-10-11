@@ -1,3 +1,4 @@
+import { financialSchema } from "./financial-schema";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { calculateNetWorthByCurrency } from "./net-worth";
@@ -10,7 +11,8 @@ function civilToday() {
 export const getKnownNetWorth = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const supabase = financialSchema(context.supabase);
     const [accountsResult, assetsResult, invoicesResult, balancesResult] = await Promise.all([
       supabase
         .from("financial_accounts")
@@ -57,7 +59,8 @@ export const getKnownNetWorth = createServerFn({ method: "GET" })
 export const getIntegratedFinancialSnapshot = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+    const supabase = financialSchema(context.supabase);
     const asOfDate = civilToday();
     const [accountsResult, balancesResult, invoicesResult] = await Promise.all([
       supabase.from("financial_accounts").select("id, name, account_type, currency_code, is_active, opening_balance_date").eq("user_id", userId).eq("is_active", true),
