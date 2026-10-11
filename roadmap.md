@@ -1,3 +1,11 @@
+# Fechamento das pendências financeiras — sem implantação
+
+- [ ] Substituir os cinco TODOs por regressões dos comportamentos existentes
+- [ ] Alinhar aportes revertidos no histórico e na tela Investimentos
+- [ ] Garantir exclusividade cartão/benefício sob concorrência real
+- [ ] Documentar titularidade e estratégia de exclusão para aprovação
+- [ ] Revisar diff anterior, executar testes isolados e registrar resultado
+
 # Correção consolidada financeira — sem implantação
 
 - [x] Corrigir migrações financeiras e preservar definições legadas
