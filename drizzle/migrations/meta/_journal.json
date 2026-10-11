@@ -22,6 +22,55 @@
       "when": 1791637947000,
       "tag": "0002_require_invoice_responsibility",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791756169925,
+      "tag": "0003_financial_accounts_m1",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791756326493,
+      "tag": "0004_financial_movements_m2",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791756414828,
+      "tag": "0005_credit_cards_invoices_m3",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791756489804,
+      "tag": "0006_benefit_wallets_m4",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791756508353,
+      "tag": "0007_purchase_association_isolation_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791756556081,
+      "tag": "0008_investment_net_worth_m5",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791756601508,
+      "tag": "0009_financial_reconciliation_m6",
+      "breakpoints": true
     }
   ]
 }

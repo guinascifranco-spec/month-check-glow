@@ -1,6 +1,6 @@
-/** Explicit M1–M6 contract, NOT a claim that production has been migrated.
- * Reuses generated legacy types; only pending additions live here.
- * Keep synchronized with migration files and remove when generated types cover them.
+/** Explicit M1–M6 contract for SQL-nullable arguments and results.
+ * Reuses generated legacy types without intersecting incompatible RPC nullability.
+ * Keep synchronized with the applied migration files.
  */
 import type { Database as LiveDatabase, Json } from "@/integrations/supabase/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -427,7 +427,25 @@ export type FinancialDatabase = Omit<LiveDatabase, "public"> & {
         Relationships: []
       }
     };
-    Functions: PublicSchema["Functions"] & {
+    Functions: Omit<PublicSchema["Functions"],
+      | "cancel_financial_transfer_with_reason" | "record_financial_account_reconciliation"
+      | "list_financial_account_reconciliations" | "record_investment_valuation"
+      | "list_investment_valuations" | "reverse_investment_cash_operation"
+      | "record_investment_contribution" | "record_investment_redemption"
+      | "record_investment_dividend_receipt" | "associate_credit_card_invoice_row"
+      | "close_credit_card_invoice" | "create_credit_card_invoice"
+      | "list_credit_card_invoice_items" | "list_credit_card_invoices"
+      | "list_credit_card_payments" | "unlink_credit_card_invoice_row"
+      | "list_credit_cards" | "list_unlinked_invoice_rows" | "record_credit_card_payment"
+      | "reopen_credit_card_invoice" | "save_credit_card" | "set_credit_card_active"
+      | "cancel_financial_transfer" | "record_benefit_wallet_event"
+      | "list_benefit_wallet_events" | "list_unlinked_benefit_budget_rows"
+      | "unlink_benefit_budget_row" | "create_financial_movement"
+      | "create_financial_transfer" | "delete_financial_movement"
+      | "financial_account_balances" | "import_invoice_rows"
+      | "list_financial_movement_categories" | "list_financial_movements"
+      | "update_financial_movement"
+    > & {
       cancel_financial_transfer_with_reason: {
         Args: { p_transfer_id: string; p_reason: string }
         Returns: string
