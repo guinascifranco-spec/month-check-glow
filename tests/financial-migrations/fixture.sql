@@ -17,6 +17,14 @@ CREATE TABLE public.month_check_rows (
   invoice_card text, invoice_line integer, invoice_source text,
   invoice_installment_current integer, invoice_installment_total integer
 );
+-- Preserve the legacy parent UPDATE side effect during concurrency probes.
+CREATE FUNCTION public.update_updated_at_column() RETURNS trigger
+LANGUAGE plpgsql SET search_path = public AS $$
+BEGIN NEW.updated_at = now(); RETURN NEW; END;
+$$;
+CREATE TRIGGER update_month_check_rows_updated_at
+BEFORE UPDATE ON public.month_check_rows
+FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 CREATE TYPE public.provento_status AS ENUM ('a_reinvestir','reinvestido');
 CREATE TABLE public.ativos (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL, nome text,
