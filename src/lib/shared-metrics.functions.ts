@@ -3,6 +3,7 @@ import { z } from "zod";
 import { personalContribution } from "./personal-finance";
 import { getFinancialCycle } from "./financial-cycle";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { financialSchema } from "./financial-schema";
 
 /**
  * shared-metrics.functions.ts
@@ -144,7 +145,7 @@ export const getAccumulatedWithPatrimony = createServerFn({ method: "GET" })
         .from("aportes")
         .select("ativo_id, data, valor_total")
         .eq("user_id", userId),
-      supabase.from("ativos").select("id, currency_code").eq("user_id", userId),
+      financialSchema(supabase).from("ativos").select("id, currency_code").eq("user_id", userId),
     ]);
 
     if (monthlyResult.error) throw new Error(monthlyResult.error.message);
