@@ -8,7 +8,7 @@ export type Responsibility = keyof typeof RESPONSIBILITIES;
 export type FinancialRow = {
   tipo: string; valor: number; invoice_source?: string | null;
   invoice_responsibility?: string | null; invoice_personal_value?: number | null;
-  invoice_payment?: boolean;
+  invoice_payment?: boolean | null;
 };
 
 /** Integral values stay untouched. Only classified invoice credits offset consumption. */

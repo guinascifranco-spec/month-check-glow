@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { personalContribution, validPersonalPortion, type Responsibility } from "./personal-finance";
+import { getFinancialCycle } from "./financial-cycle";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const DEFAULT_CATEGORIES = [
@@ -26,13 +27,14 @@ export const getTransactionWorkspace = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    let { data: categories, error: categoryError } = await supabase
+    const { data: initialCategories, error: categoryError } = await supabase
       .from("expense_categories")
       .select("id, name, color_key, monthly_budget")
       .eq("user_id", userId)
       .order("name");
     if (categoryError) throw new Error(categoryError.message);
 
+    let categories = initialCategories;
     if (!categories?.length) {
       const seeded = DEFAULT_CATEGORIES.map(([name, color_key]) => ({ user_id: userId, name, color_key }));
       const result = await supabase.from("expense_categories").insert(seeded).select("id, name, color_key, monthly_budget").order("name");
@@ -40,34 +42,27 @@ export const getTransactionWorkspace = createServerFn({ method: "POST" })
       categories = result.data;
     }
 
-    const fromDate = new Date(`${data.from}T12:00:00Z`);
-    const toDate = new Date(`${data.to}T12:00:00Z`);
-    const fromYear = fromDate.getUTCFullYear();
-    const fromMonth = fromDate.getUTCMonth() + 1;
-    const toYear = toDate.getUTCFullYear();
-    const toMonth = toDate.getUTCMonth() + 1;
     const { data: rows, error: rowError } = await supabase
       .from("month_check_rows")
       .select("id, year, month, transaction_date, descricao, tipo, valor, quitado, expense_class, category_id, position, invoice_installment_current, invoice_installment_total, invoice_source, invoice_responsibility, invoice_personal_value, invoice_payment")
       .eq("user_id", userId)
-      .or(`and(year.eq.${fromYear},month.gte.${fromMonth}),and(year.gt.${fromYear},year.lt.${toYear}),and(year.eq.${toYear},month.lte.${toMonth})`)
+      // User-entered ranges stay inclusive and are filtered by their civil dates.
+      // This leaves historical rows without a recorded date unassigned.
+      .gte("transaction_date", data.from)
+      .lte("transaction_date", data.to)
       .order("year", { ascending: false })
       .order("month", { ascending: false })
       .order("transaction_date", { ascending: false, nullsFirst: false })
       .order("position", { ascending: true });
     if (rowError) throw new Error(rowError.message);
 
-    const filtered = (rows ?? []).filter((row) => {
-      const effectiveDate = row.transaction_date ?? `${row.year}-${String(row.month).padStart(2, "0")}-01`;
-      return effectiveDate >= data.from && effectiveDate <= data.to;
-    });
     const { data: rules, error: rulesError } = await supabase
       .from("category_rules")
       .select("id, keyword, category_id")
       .eq("user_id", userId);
     if (rulesError) throw new Error(rulesError.message);
 
-    return { categories: categories ?? [], rules: rules ?? [], rows: filtered };
+    return { categories: categories ?? [], rules: rules ?? [], rows: rows ?? [] };
   });
 
 export const getMonthlyCategorySpending = createServerFn({ method: "POST" })
@@ -76,9 +71,12 @@ export const getMonthlyCategorySpending = createServerFn({ method: "POST" })
     year: z.number().int().min(1970).max(3000), month: z.number().int().min(1).max(12),
   }).parse(input))
   .handler(async ({ data, context }) => {
+    const cycle = getFinancialCycle(`${data.year}-${String(data.month).padStart(2, "0")}-02`);
     const { data: rows, error } = await context.supabase.from("month_check_rows")
       .select("category_id, valor, tipo, invoice_responsibility, invoice_personal_value, invoice_payment")
-      .eq("user_id", context.userId).eq("year", data.year).eq("month", data.month);
+      .eq("user_id", context.userId)
+      .gte("transaction_date", cycle.startInclusive)
+      .lt("transaction_date", cycle.endExclusive);
     if (error) throw new Error(error.message);
     const amounts: Record<string, number> = {};
     let uncategorized = 0;

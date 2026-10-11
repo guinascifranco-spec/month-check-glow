@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatFinancialCycleRange, getFinancialCycle } from "@/lib/financial-cycle";
 
 type Category = { id: string; name: string; monthly_budget: number | null };
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const monthFormatter = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" });
 
 function BudgetRow({ category, spent, onSave }: {
   category: Category; spent: number;
@@ -59,20 +59,21 @@ export function CategoryBudget({ categories, year, month, onPeriodChange, spendi
   onSave: (id: string, amount: number | null) => Promise<void>;
 }) {
   const shift = (offset: number) => { const date = new Date(year, month - 1 + offset, 1); onPeriodChange(date.getFullYear(), date.getMonth() + 1); };
-  return <section className="mb-6" aria-label="Orçamento por categoria">
+  const cycle = getFinancialCycle(`${year}-${String(month).padStart(2, "0")}-02`);
+  return <section className="mb-6" aria-label="Orçamento por categoria no ciclo financeiro">
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h2 className="text-lg font-bold text-foreground">Orçamento x Real por categoria</h2>
+      <h2 className="text-lg font-bold text-foreground">Orçamento x Real por ciclo</h2>
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="min-h-11 min-w-11" aria-label="Mês anterior" onClick={() => shift(-1)}><ChevronLeft /></Button>
-        <span className="min-w-32 text-center text-sm font-semibold capitalize" aria-live="polite">{monthFormatter.format(new Date(year, month - 1, 1))}</span>
-        <Button variant="ghost" size="icon" className="min-h-11 min-w-11" aria-label="Próximo mês" onClick={() => shift(1)}><ChevronRight /></Button>
+        <Button variant="ghost" size="icon" className="min-h-11 min-w-11" aria-label="Ciclo anterior" onClick={() => shift(-1)}><ChevronLeft /></Button>
+        <span className="text-center text-sm font-semibold" aria-live="polite">{formatFinancialCycleRange(cycle)}</span>
+        <Button variant="ghost" size="icon" className="min-h-11 min-w-11" aria-label="Próximo ciclo" onClick={() => shift(1)}><ChevronRight /></Button>
       </div>
     </div>
     <div className="border-t border-border/60">
       {categories.length === 0 ? <p className="py-5 text-sm text-muted-foreground">Nenhuma categoria cadastrada.</p> :
         categories.map((category) => <BudgetRow key={category.id} category={category} spent={spending[category.id] ?? 0} onSave={onSave} />)}
     </div>
-    {uncategorized > 0 && <p className="mt-3 text-sm text-muted-foreground">{brl.format(uncategorized)} em saídas sem categoria neste mês. Classifique os lançamentos para incluí-los no comparativo.</p>}
+    {uncategorized > 0 && <p className="mt-3 text-sm text-muted-foreground">{brl.format(uncategorized)} em saídas sem categoria neste ciclo. Classifique os lançamentos para incluí-los no comparativo.</p>}
     {loading && <p className="py-2 text-sm text-muted-foreground">Atualizando valores...</p>}
   </section>;
 }

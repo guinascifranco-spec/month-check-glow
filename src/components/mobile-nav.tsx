@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ListChecks, LayoutDashboard, CreditCard, TrendingUp, Telescope, ReceiptText, MoreHorizontal, ScanText } from "lucide-react";
+import { ListChecks, LayoutDashboard, CreditCard, TrendingUp, Telescope, ReceiptText, MoreHorizontal, ScanText, Wallet, ArrowLeftRight } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -40,9 +40,9 @@ export function MobileNav() {
             </Link>
           );
         })}
-        <Button variant="ghost" aria-label="Mais opções" onClick={() => setOpen(true)} className={`h-auto min-h-[56px] flex-col gap-1 rounded-none px-0.5 text-[10px] ${["/analisar-fatura", "/visao-futura", "/investimentos"].includes(pathname) ? "text-primary" : "text-muted-foreground"}`}><MoreHorizontal className="h-5 w-5" /><span>Mais</span></Button>
+      <Button variant="ghost" aria-label="Mais opções" onClick={() => setOpen(true)} className={`h-auto min-h-[56px] flex-col gap-1 rounded-none px-0.5 text-[10px] ${["/analisar-fatura", "/visao-futura", "/investimentos", "/contas", "/movimentacoes", "/faturas", "/beneficios"].includes(pathname) ? "text-primary" : "text-muted-foreground"}`}><MoreHorizontal className="h-5 w-5" /><span>Mais</span></Button>
       </div>
-      <Dialog open={open} onOpenChange={setOpen}><DialogContent><DialogHeader><DialogTitle>Mais opções</DialogTitle><DialogDescription>Navegação Month Check</DialogDescription></DialogHeader><div className="grid gap-2">{[{ to: "/investimentos", label: "Investimentos", Icon: TrendingUp }, { to: "/visao-futura", label: "Visão Futura", Icon: Telescope }, { to: "/analisar-fatura", label: "Analisar fatura", Icon: ScanText }].map(({ to, label, Icon }) => <Button asChild variant="ghost" className="justify-start" key={to}><Link to={to} onClick={() => setOpen(false)}><Icon className="mr-2 h-5 w-5" />{label}</Link></Button>)}<div className="border-t border-border pt-2"><ThemeToggle showLabel /></div></div></DialogContent></Dialog>
+      <Dialog open={open} onOpenChange={setOpen}><DialogContent><DialogHeader><DialogTitle>Mais opções</DialogTitle><DialogDescription>Navegação Month Check</DialogDescription></DialogHeader><div className="grid gap-2">{[{ to: "/investimentos", label: "Investimentos", Icon: TrendingUp }, { to: "/contas", label: "Contas", Icon: Wallet }, { to: "/movimentacoes", label: "Movimentações", Icon: ArrowLeftRight }, { to: "/faturas", label: "Cartões e faturas", Icon: CreditCard }, { to: "/beneficios", label: "Vale-alimentação", Icon: Wallet }, { to: "/visao-futura", label: "Visão Futura", Icon: Telescope }, { to: "/analisar-fatura", label: "Analisar fatura", Icon: ScanText }].map(({ to, label, Icon }) => <Button asChild variant="ghost" className="justify-start" key={to}><Link to={to} onClick={() => setOpen(false)}><Icon className="mr-2 h-5 w-5" />{label}</Link></Button>)}<div className="border-t border-border pt-2"><ThemeToggle showLabel /></div></div></DialogContent></Dialog>
     </nav>
   );
 }

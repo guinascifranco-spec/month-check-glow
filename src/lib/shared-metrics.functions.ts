@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { personalContribution } from "./personal-finance";
+import { getFinancialCycle } from "./financial-cycle";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
@@ -25,9 +26,20 @@ export type MonthlyTotal = {
 
 export type AccumulatedSnapshot = MonthlyTotal & {
   saldoAcumulado: number;
+  /** BRL contribution cost accumulated through this cycle, not market value. */
   totalInvestido: number;
-  patrimonioTotal: number;
+  totalInvestidoByCurrency: Record<string, number>;
+  patrimonioTotal: null;
 };
+
+function cycleBucket(date: string) {
+  const start = getFinancialCycle(date).startInclusive;
+  return {
+    key: start.slice(0, 7),
+    year: Number(start.slice(0, 4)),
+    month: Number(start.slice(5, 7)),
+  };
+}
 
 // ─── getMonthlyTotals ────────────────────────────────────────────────────────
 
@@ -43,7 +55,7 @@ export const getMonthlyTotals = createServerFn({ method: "GET" })
 
     const { data, error } = await supabase
       .from("month_check_rows")
-      .select("year, month, tipo, valor, invoice_responsibility, invoice_personal_value, invoice_payment")
+      .select("transaction_date, tipo, valor, invoice_responsibility, invoice_personal_value, invoice_payment")
       .eq("user_id", userId)
       .not("transaction_date", "is", null); // Apenas Lançamentos reais
 
@@ -51,14 +63,15 @@ export const getMonthlyTotals = createServerFn({ method: "GET" })
 
     const map = new Map<string, MonthlyTotal>();
     for (const r of data ?? []) {
+      if (!r.transaction_date) continue;
       const contribution = personalContribution(r);
       const v = contribution.income + Math.abs(contribution.expense);
       if (v === 0) continue;
-      const key = `${r.year}-${String(r.month).padStart(2, "0")}`;
-      let cur = map.get(key);
+      const bucket = cycleBucket(r.transaction_date);
+      let cur = map.get(bucket.key);
       if (!cur) {
-        cur = { year: r.year as number, month: r.month as number, entradas: 0, saidas: 0, saldo: 0 };
-        map.set(key, cur);
+        cur = { year: bucket.year, month: bucket.month, entradas: 0, saidas: 0, saldo: 0 };
+        map.set(bucket.key, cur);
       }
       cur.entradas += contribution.income;
       cur.saidas += contribution.expense;
@@ -77,8 +90,8 @@ const monthSchema = z.object({
 });
 
 /**
- * Retorna totais de entradas/saídas/saldo para um mês específico.
- * Fonte: month_check_rows com transaction_date no período.
+ * Retorna totais para o ciclo iniciado no dia 2 do mês informado.
+ * Fonte: month_check_rows com transaction_date no intervalo [início, fim).
  */
 export const getMonthTotals = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -86,17 +99,15 @@ export const getMonthTotals = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
-    const fromDate = `${data.year}-${String(data.month).padStart(2, "0")}-01`;
-    const lastDay = new Date(data.year, data.month, 0).getDate();
-    const toDate = `${data.year}-${String(data.month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    const cycle = getFinancialCycle(`${data.year}-${String(data.month).padStart(2, "0")}-02`);
 
     const { data: rows, error } = await supabase
       .from("month_check_rows")
       .select("tipo, valor, invoice_responsibility, invoice_personal_value, invoice_payment")
       .eq("user_id", userId)
       .not("transaction_date", "is", null)
-      .gte("transaction_date", fromDate)
-      .lte("transaction_date", toDate);
+      .gte("transaction_date", cycle.startInclusive)
+      .lt("transaction_date", cycle.endExclusive);
 
     if (error) throw new Error(error.message);
 
@@ -104,7 +115,6 @@ export const getMonthTotals = createServerFn({ method: "POST" })
     let saidas = 0;
     for (const r of rows ?? []) {
       const contribution = personalContribution(r);
-      const v = contribution.income + Math.abs(contribution.expense);
       entradas += contribution.income;
       saidas += contribution.expense;
     }
@@ -115,47 +125,61 @@ export const getMonthTotals = createServerFn({ method: "POST" })
 // ─── getAccumulatedWithPatrimony ─────────────────────────────────────────────
 
 /**
- * Retorna histórico mês a mês com saldo acumulado + patrimônio total.
- * Usa os aportes registrados como base do total investido.
- * Patrimônio = saldo acumulado + total investido.
+ * Retorna histórico de resultado orçamentário e custo de aportes.
+ * Não reconstrói patrimônio histórico: faltam avaliações de mercado e saldos
+ * de caixa confiáveis por data.
  */
 export const getAccumulatedWithPatrimony = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
 
-    const [monthlyResult, aportesResult] = await Promise.all([
+    const [monthlyResult, aportesResult, assetsResult] = await Promise.all([
       supabase
         .from("month_check_rows")
-        .select("year, month, tipo, valor, invoice_responsibility, invoice_personal_value, invoice_payment")
+        .select("transaction_date, tipo, valor, invoice_responsibility, invoice_personal_value, invoice_payment")
         .eq("user_id", userId)
         .not("transaction_date", "is", null),
       supabase
         .from("aportes")
-        .select("valor_total")
+        .select("ativo_id, data, valor_total")
         .eq("user_id", userId),
+      supabase.from("ativos").select("id, currency_code").eq("user_id", userId),
     ]);
 
     if (monthlyResult.error) throw new Error(monthlyResult.error.message);
     if (aportesResult.error) throw new Error(aportesResult.error.message);
+    if (assetsResult.error) throw new Error(assetsResult.error.message);
 
-    // Calcular total investido atual pela soma dos aportes registrados.
-    const totalInvestido = (aportesResult.data ?? []).reduce(
-      (s, aporte) => s + (Number(aporte.valor_total) || 0),
-      0,
-    );
+    // Custo registrado por moeda; totalInvestido remains BRL-only for legacy projection consumers.
+    const currencyByAsset = new Map((assetsResult.data ?? []).map((asset) => [asset.id, asset.currency_code]));
+    const totalInvestidoByCurrency: Record<string, number> = {};
+    const contributionsByCycle = new Map<string, Record<string, number>>();
+    for (const aporte of aportesResult.data ?? []) {
+      const currency = currencyByAsset.get(aporte.ativo_id);
+      if (currency) {
+        const amount = Number(aporte.valor_total) || 0;
+        totalInvestidoByCurrency[currency] = (totalInvestidoByCurrency[currency] ?? 0) + amount;
+        const cycle = cycleBucket(aporte.data).key;
+        const byCurrency = contributionsByCycle.get(cycle) ?? {};
+        byCurrency[currency] = (byCurrency[currency] ?? 0) + amount;
+        contributionsByCycle.set(cycle, byCurrency);
+      }
+    }
+    const totalInvestido = totalInvestidoByCurrency.BRL ?? 0;
 
     // Agrupar por mês
     const map = new Map<string, MonthlyTotal>();
     for (const r of monthlyResult.data ?? []) {
+      if (!r.transaction_date) continue;
       const contribution = personalContribution(r);
       const v = contribution.income + Math.abs(contribution.expense);
       if (v === 0) continue;
-      const key = `${r.year}-${String(r.month).padStart(2, "0")}`;
-      let cur = map.get(key);
+      const bucket = cycleBucket(r.transaction_date);
+      let cur = map.get(bucket.key);
       if (!cur) {
-        cur = { year: r.year as number, month: r.month as number, entradas: 0, saidas: 0, saldo: 0 };
-        map.set(key, cur);
+        cur = { year: bucket.year, month: bucket.month, entradas: 0, saidas: 0, saldo: 0 };
+        map.set(bucket.key, cur);
       }
       cur.entradas += contribution.income;
       cur.saidas += contribution.expense;
@@ -166,24 +190,29 @@ export const getAccumulatedWithPatrimony = createServerFn({ method: "GET" })
       .sort((a, b) => (a.year - b.year) || (a.month - b.month));
 
     let acc = 0;
+    const investedAcc: Record<string, number> = {};
     const result: AccumulatedSnapshot[] = sorted.map((m) => {
       acc += m.saldo;
+      const key = `${m.year}-${String(m.month).padStart(2, "0")}`;
+      for (const [currency, amount] of Object.entries(contributionsByCycle.get(key) ?? {})) {
+        investedAcc[currency] = (investedAcc[currency] ?? 0) + amount;
+      }
       return {
         ...m,
         saldoAcumulado: acc,
-        totalInvestido,
-        patrimonioTotal: acc + totalInvestido,
+        totalInvestido: investedAcc.BRL ?? 0,
+        totalInvestidoByCurrency: { ...investedAcc },
+        patrimonioTotal: null,
       };
     });
 
-    return { months: result, totalInvestido, saldoAcumulado: acc, patrimonioTotal: acc + totalInvestido };
+    return { months: result, totalInvestido, totalInvestidoByCurrency, saldoAcumulado: acc, patrimonioTotal: null };
   });
 
 // ─── getLast3MonthsAverages ──────────────────────────────────────────────────
 
 /**
- * Retorna médias dos últimos N meses com dados reais (padrão: 3).
- * Usado pela projeção automática na Visão Geral.
+ * Retorna médias dos últimos N ciclos financeiros com dados reais (padrão: 3).
  * Fonte: month_check_rows com transaction_date.
  */
 export const getLast3MonthsAverages = createServerFn({ method: "POST" })
@@ -198,7 +227,7 @@ export const getLast3MonthsAverages = createServerFn({ method: "POST" })
 
     const { data: rows, error } = await supabase
       .from("month_check_rows")
-      .select("year, month, tipo, valor, expense_class, invoice_responsibility, invoice_personal_value, invoice_payment")
+      .select("transaction_date, tipo, valor, expense_class, invoice_responsibility, invoice_personal_value, invoice_payment")
       .eq("user_id", userId)
       .not("transaction_date", "is", null);
 
@@ -209,9 +238,10 @@ export const getLast3MonthsAverages = createServerFn({ method: "POST" })
     const byMonth = new Map<string, MonthBucket>();
 
     for (const r of rows ?? []) {
+      if (!r.transaction_date) continue;
       const contribution = personalContribution(r);
       const v = contribution.income + Math.abs(contribution.expense);
-      const key = `${r.year}-${String(r.month).padStart(2, "0")}`;
+      const key = cycleBucket(r.transaction_date).key;
       const cur = byMonth.get(key) ?? { renda: 0, fixos: 0, variaveis: 0, hasValue: false };
       if (v > 0) cur.hasValue = true;
       cur.renda += contribution.income;

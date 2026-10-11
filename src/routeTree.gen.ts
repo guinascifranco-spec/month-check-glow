@@ -13,9 +13,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAnalisarFaturaRouteImport } from './routes/_authenticated/analisar-fatura'
+import { Route as AuthenticatedBeneficiosRouteImport } from './routes/_authenticated/beneficios'
 import { Route as AuthenticatedConferenciaRouteImport } from './routes/_authenticated/conferencia'
+import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
+import { Route as AuthenticatedFaturasRouteImport } from './routes/_authenticated/faturas'
 import { Route as AuthenticatedInvestimentosRouteImport } from './routes/_authenticated/investimentos'
 import { Route as AuthenticatedLancamentosRouteImport } from './routes/_authenticated/lancamentos'
+import { Route as AuthenticatedMovimentacoesRouteImport } from './routes/_authenticated/movimentacoes'
 import { Route as AuthenticatedParcelasRouteImport } from './routes/_authenticated/parcelas'
 import { Route as AuthenticatedVisaoFuturaRouteImport } from './routes/_authenticated/visao-futura'
 import { Route as AuthenticatedVisaoGeralRouteImport } from './routes/_authenticated/visao-geral'
@@ -41,12 +45,27 @@ const AuthenticatedAnalisarFaturaRoute =
     path: '/analisar-fatura',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedBeneficiosRoute = AuthenticatedBeneficiosRouteImport.update({
+  id: '/beneficios',
+  path: '/beneficios',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedConferenciaRoute =
   AuthenticatedConferenciaRouteImport.update({
     id: '/conferencia',
     path: '/conferencia',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedContasRoute = AuthenticatedContasRouteImport.update({
+  id: '/contas',
+  path: '/contas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFaturasRoute = AuthenticatedFaturasRouteImport.update({
+  id: '/faturas',
+  path: '/faturas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedInvestimentosRoute =
   AuthenticatedInvestimentosRouteImport.update({
     id: '/investimentos',
@@ -57,6 +76,12 @@ const AuthenticatedLancamentosRoute =
   AuthenticatedLancamentosRouteImport.update({
     id: '/lancamentos',
     path: '/lancamentos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMovimentacoesRoute =
+  AuthenticatedMovimentacoesRouteImport.update({
+    id: '/movimentacoes',
+    path: '/movimentacoes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedParcelasRoute = AuthenticatedParcelasRouteImport.update({
@@ -85,9 +110,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/analisar-fatura': typeof AuthenticatedAnalisarFaturaRoute
+  '/beneficios': typeof AuthenticatedBeneficiosRoute
   '/conferencia': typeof AuthenticatedConferenciaRoute
+  '/contas': typeof AuthenticatedContasRoute
+  '/faturas': typeof AuthenticatedFaturasRoute
   '/investimentos': typeof AuthenticatedInvestimentosRoute
   '/lancamentos': typeof AuthenticatedLancamentosRoute
+  '/movimentacoes': typeof AuthenticatedMovimentacoesRoute
   '/parcelas': typeof AuthenticatedParcelasRoute
   '/visao-futura': typeof AuthenticatedVisaoFuturaRoute
   '/visao-geral': typeof AuthenticatedVisaoGeralRoute
@@ -97,9 +126,13 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/analisar-fatura': typeof AuthenticatedAnalisarFaturaRoute
+  '/beneficios': typeof AuthenticatedBeneficiosRoute
   '/conferencia': typeof AuthenticatedConferenciaRoute
+  '/contas': typeof AuthenticatedContasRoute
+  '/faturas': typeof AuthenticatedFaturasRoute
   '/investimentos': typeof AuthenticatedInvestimentosRoute
   '/lancamentos': typeof AuthenticatedLancamentosRoute
+  '/movimentacoes': typeof AuthenticatedMovimentacoesRoute
   '/parcelas': typeof AuthenticatedParcelasRoute
   '/visao-futura': typeof AuthenticatedVisaoFuturaRoute
   '/visao-geral': typeof AuthenticatedVisaoGeralRoute
@@ -111,9 +144,13 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/analisar-fatura': typeof AuthenticatedAnalisarFaturaRoute
+  '/_authenticated/beneficios': typeof AuthenticatedBeneficiosRoute
   '/_authenticated/conferencia': typeof AuthenticatedConferenciaRoute
+  '/_authenticated/contas': typeof AuthenticatedContasRoute
+  '/_authenticated/faturas': typeof AuthenticatedFaturasRoute
   '/_authenticated/investimentos': typeof AuthenticatedInvestimentosRoute
   '/_authenticated/lancamentos': typeof AuthenticatedLancamentosRoute
+  '/_authenticated/movimentacoes': typeof AuthenticatedMovimentacoesRoute
   '/_authenticated/parcelas': typeof AuthenticatedParcelasRoute
   '/_authenticated/visao-futura': typeof AuthenticatedVisaoFuturaRoute
   '/_authenticated/visao-geral': typeof AuthenticatedVisaoGeralRoute
@@ -125,9 +162,13 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/analisar-fatura'
+    | '/beneficios'
     | '/conferencia'
+    | '/contas'
+    | '/faturas'
     | '/investimentos'
     | '/lancamentos'
+    | '/movimentacoes'
     | '/parcelas'
     | '/visao-futura'
     | '/visao-geral'
@@ -137,9 +178,13 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/analisar-fatura'
+    | '/beneficios'
     | '/conferencia'
+    | '/contas'
+    | '/faturas'
     | '/investimentos'
     | '/lancamentos'
+    | '/movimentacoes'
     | '/parcelas'
     | '/visao-futura'
     | '/visao-geral'
@@ -150,9 +195,13 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/analisar-fatura'
+    | '/_authenticated/beneficios'
     | '/_authenticated/conferencia'
+    | '/_authenticated/contas'
+    | '/_authenticated/faturas'
     | '/_authenticated/investimentos'
     | '/_authenticated/lancamentos'
+    | '/_authenticated/movimentacoes'
     | '/_authenticated/parcelas'
     | '/_authenticated/visao-futura'
     | '/_authenticated/visao-geral'
@@ -196,11 +245,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAnalisarFaturaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/beneficios': {
+      id: '/_authenticated/beneficios'
+      path: '/beneficios'
+      fullPath: '/beneficios'
+      preLoaderRoute: typeof AuthenticatedBeneficiosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/conferencia': {
       id: '/_authenticated/conferencia'
       path: '/conferencia'
       fullPath: '/conferencia'
       preLoaderRoute: typeof AuthenticatedConferenciaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/contas': {
+      id: '/_authenticated/contas'
+      path: '/contas'
+      fullPath: '/contas'
+      preLoaderRoute: typeof AuthenticatedContasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/faturas': {
+      id: '/_authenticated/faturas'
+      path: '/faturas'
+      fullPath: '/faturas'
+      preLoaderRoute: typeof AuthenticatedFaturasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/investimentos': {
@@ -215,6 +285,13 @@ declare module '@tanstack/react-router' {
       path: '/lancamentos'
       fullPath: '/lancamentos'
       preLoaderRoute: typeof AuthenticatedLancamentosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/movimentacoes': {
+      id: '/_authenticated/movimentacoes'
+      path: '/movimentacoes'
+      fullPath: '/movimentacoes'
+      preLoaderRoute: typeof AuthenticatedMovimentacoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/parcelas': {
@@ -250,9 +327,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAnalisarFaturaRoute: typeof AuthenticatedAnalisarFaturaRoute
+  AuthenticatedBeneficiosRoute: typeof AuthenticatedBeneficiosRoute
   AuthenticatedConferenciaRoute: typeof AuthenticatedConferenciaRoute
+  AuthenticatedContasRoute: typeof AuthenticatedContasRoute
+  AuthenticatedFaturasRoute: typeof AuthenticatedFaturasRoute
   AuthenticatedInvestimentosRoute: typeof AuthenticatedInvestimentosRoute
   AuthenticatedLancamentosRoute: typeof AuthenticatedLancamentosRoute
+  AuthenticatedMovimentacoesRoute: typeof AuthenticatedMovimentacoesRoute
   AuthenticatedParcelasRoute: typeof AuthenticatedParcelasRoute
   AuthenticatedVisaoFuturaRoute: typeof AuthenticatedVisaoFuturaRoute
   AuthenticatedVisaoGeralRoute: typeof AuthenticatedVisaoGeralRoute
@@ -260,9 +341,13 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAnalisarFaturaRoute: AuthenticatedAnalisarFaturaRoute,
+  AuthenticatedBeneficiosRoute: AuthenticatedBeneficiosRoute,
   AuthenticatedConferenciaRoute: AuthenticatedConferenciaRoute,
+  AuthenticatedContasRoute: AuthenticatedContasRoute,
+  AuthenticatedFaturasRoute: AuthenticatedFaturasRoute,
   AuthenticatedInvestimentosRoute: AuthenticatedInvestimentosRoute,
   AuthenticatedLancamentosRoute: AuthenticatedLancamentosRoute,
+  AuthenticatedMovimentacoesRoute: AuthenticatedMovimentacoesRoute,
   AuthenticatedParcelasRoute: AuthenticatedParcelasRoute,
   AuthenticatedVisaoFuturaRoute: AuthenticatedVisaoFuturaRoute,
   AuthenticatedVisaoGeralRoute: AuthenticatedVisaoGeralRoute,

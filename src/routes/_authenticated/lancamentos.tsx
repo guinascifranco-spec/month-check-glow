@@ -28,6 +28,7 @@ import {
   applyCategoryRules,
 } from "@/lib/transactions.functions";
 import { personalContribution, ownPortion, RESPONSIBILITIES, type Responsibility } from "@/lib/personal-finance";
+import { formatFinancialCycleRange, getFinancialCycle } from "@/lib/financial-cycle";
 import { parseMoney } from "@/lib/invoice";
 import { InvoiceResponsibility } from "@/components/invoice-responsibility";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
@@ -50,10 +51,10 @@ type Transaction = {
   id: string; year: number; month: number; transaction_date: string | null; descricao: string;
   tipo: "entrada" | "saida"; valor: number; quitado: boolean; expense_class: "fixo" | "variavel";
   category_id: string | null; position: number;
-  invoice_source?: string | null; invoice_responsibility?: Responsibility | null; invoice_personal_value?: number | null; invoice_payment?: boolean;
+  invoice_source?: string | null; invoice_responsibility?: Responsibility | null; invoice_personal_value?: number | null; invoice_payment?: boolean | null;
   invoice_installment_current?: number | null; invoice_installment_total?: number | null;
 };
-type FormState = { id?: string; date: string; description: string; type: "entrada" | "saida"; value: string; categoryId: string; expenseClass: "fixo" | "variavel"; settled: boolean; installmentCurrent?: string; installmentTotal?: string; invoiceSource?: string | null; responsibility?: Responsibility | null; ownValue?: string; invoicePayment?: boolean };
+type FormState = { id?: string; date: string; description: string; type: "entrada" | "saida"; value: string; categoryId: string; expenseClass: "fixo" | "variavel"; settled: boolean; installmentCurrent?: string; installmentTotal?: string; invoiceSource?: string | null; responsibility?: Responsibility | null; ownValue?: string; invoicePayment?: boolean | null };
 
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -68,6 +69,10 @@ function firstDayMonthsAgo(months: number) {
   const date = new Date();
   date.setMonth(date.getMonth() - months + 1, 1);
   return localDate(date);
+}
+function currentCyclePeriod() {
+  const start = getFinancialCycle(localDate()).startInclusive;
+  return { year: Number(start.slice(0, 4)), month: Number(start.slice(5, 7)) };
 }
 function emptyForm(): FormState { return { date: localDate(), description: "", type: "saida", value: "", categoryId: "", expenseClass: "variavel", settled: false }; }
 
@@ -99,7 +104,7 @@ function TransactionsPage() {
 
   const [from, setFrom] = useState(() => firstDayMonthsAgo(6));
   const [to, setTo] = useState(() => localDate());
-  const [budgetPeriod, setBudgetPeriod] = useState(() => ({ year: new Date().getFullYear(), month: new Date().getMonth() + 1 }));
+  const [budgetPeriod, setBudgetPeriod] = useState(currentCyclePeriod);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("todos");
   const [categoryFilter, setCategoryFilter] = useState("todas");
@@ -142,11 +147,12 @@ function TransactionsPage() {
     return sum;
   }, { income: 0, expense: 0 }), [rows]);
 
-  // Group by month/year
+  // Group dated transactions by the financial cycle containing the purchase/entry date.
   const groupedRows = useMemo(() => {
     const map = new Map<string, Transaction[]>();
     for (const row of rows) {
-      const g = `${row.year}-${String(row.month).padStart(2, "0")}`;
+      if (!row.transaction_date) continue;
+      const g = getFinancialCycle(row.transaction_date).startInclusive.slice(0, 7);
       if (!map.has(g)) map.set(g, []);
       map.get(g)?.push(row);
     }
@@ -295,7 +301,7 @@ function TransactionsPage() {
             </div>
 
             <div className="neu-raised rounded-2xl p-4 sm:p-6 flex flex-col">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">Evolução Mensal</h3>
+      <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">Evolução por ciclo (dia 2 a dia 1)</h3>
               <div className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -316,8 +322,8 @@ function TransactionsPage() {
         <section className="space-y-8">
           {isLoading ? <Empty text="Carregando lançamentos..." /> : error ? <Empty text="Não foi possível carregar os lançamentos." /> : rows.length === 0 ? <Empty text="Nenhum lançamento encontrado." /> : (
             groupedRows.map(([groupKey, groupRows]) => {
-              const [y, m] = groupKey.split("-");
-              const monthName = `${MONTHS[parseInt(m, 10) - 1]} ${y}`;
+              const cycle = getFinancialCycle(`${groupKey}-02`);
+              const monthName = `Ciclo ${formatFinancialCycleRange(cycle)}`;
               return (
                 <div key={groupKey} className="finance-ledger overflow-hidden">
                   <div className="bg-muted/30 px-4 py-3 font-bold border-b border-border/50 text-sm tracking-wide">
