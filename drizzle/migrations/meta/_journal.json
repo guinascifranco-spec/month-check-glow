@@ -43,6 +43,13 @@
       "when": 1791756414828,
       "tag": "0005_credit_cards_invoices_m3",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791756489804,
+      "tag": "0006_benefit_wallets_m4",
+      "breakpoints": true
     }
   ]
 }

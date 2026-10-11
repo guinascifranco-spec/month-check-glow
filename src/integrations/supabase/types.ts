@@ -100,6 +100,48 @@ export type Database = {
         }
         Relationships: []
       }
+      benefit_wallet_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          idempotency_key: string
+          month_check_row_id: string | null
+          movement_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          idempotency_key: string
+          month_check_row_id?: string | null
+          movement_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          idempotency_key?: string
+          month_check_row_id?: string | null
+          movement_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "benefit_wallet_events_budget_row_owner_fk"
+            columns: ["month_check_row_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "month_check_rows"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "benefit_wallet_events_movement_owner_fk"
+            columns: ["movement_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "financial_movements"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       category_rules: {
         Row: {
           category_id: string
@@ -905,6 +947,22 @@ export type Database = {
         }
         Returns: Json
       }
+      list_benefit_wallet_events: {
+        Args: { p_account_id: string; p_from_date: string; p_to_date: string }
+        Returns: {
+          account_id: string
+          amount: string
+          budget_description: string
+          category_id: string
+          category_name: string
+          created_at: string
+          description: string
+          effective_date: string
+          event_type: string
+          month_check_row_id: string
+          movement_id: string
+        }[]
+      }
       list_credit_card_invoice_items: {
         Args: { p_invoice_id: string }
         Returns: {
@@ -990,6 +1048,15 @@ export type Database = {
           transfer_status: string
         }[]
       }
+      list_unlinked_benefit_budget_rows: {
+        Args: never
+        Returns: {
+          descricao: string
+          id: string
+          transaction_date: string
+          valor: string
+        }[]
+      }
       list_unlinked_invoice_rows: {
         Args: { p_limit?: number }
         Returns: {
@@ -1005,6 +1072,19 @@ export type Database = {
           transaction_date: string
           valor: string
         }[]
+      }
+      record_benefit_wallet_event: {
+        Args: {
+          p_account_id: string
+          p_amount_text: string
+          p_category_id: string
+          p_description: string
+          p_effective_date: string
+          p_event_type: string
+          p_idempotency_key: string
+          p_month_check_row_id: string
+        }
+        Returns: string
       }
       record_credit_card_payment: {
         Args: {
@@ -1034,6 +1114,10 @@ export type Database = {
       }
       set_credit_card_active: {
         Args: { p_id: string; p_is_active: boolean }
+        Returns: string
+      }
+      unlink_benefit_budget_row: {
+        Args: { p_movement_id: string }
         Returns: string
       }
       unlink_credit_card_invoice_row: {
