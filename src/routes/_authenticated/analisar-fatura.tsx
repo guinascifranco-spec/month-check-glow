@@ -1,12 +1,8 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { FileText, Upload, LogOut, X, Check, AlertTriangle } from "lucide-react";
-import { Logo } from "@/components/logo";
-import { PageTabs } from "@/components/page-tabs";
-import { MobileNav } from "@/components/mobile-nav";
-import { InstallPWAButton } from "@/components/install-pwa-button";
+import { FileText, Upload, X, Check, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,7 +20,7 @@ import { ownPortion, responsibilityTotals } from "@/lib/personal-finance";
 
 const money = (value: number | null) => value === null ? "Não identificado" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 function InvoicePage() {
-  const navigate = useNavigate(); const cache = useQueryClient(); const importFn = useServerFn(importInvoice);
+  const cache = useQueryClient(); const importFn = useServerFn(importInvoice);
   const [file, setFile] = useState<File | null>(null); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
   const [preview, setPreview] = useState<InvoicePreview | null>(null); const [rows, setRows] = useState<ReviewRow[]>([]);
   const [currency, setCurrency] = useState(""); const [ack, setAck] = useState(false); const [duplicatesAck, setDuplicatesAck] = useState(false);
@@ -102,8 +98,7 @@ function InvoicePage() {
   }
   const needsDuplicateAck = confirmation?.result.duplicates.some(d => !d.exact) ?? false;
   return <div className="finance-app min-h-screen px-4 pb-24 pt-4 sm:px-8 sm:py-6 lg:pb-8"><div className="mx-auto max-w-6xl">
-    <header className="mb-6 flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><Logo height={40} /><div><h1 className="finance-app-title text-xl sm:text-3xl">Month Check</h1><p className="text-sm text-muted-foreground">Conferência financeira pessoal</p></div></div><div className="flex items-center gap-2"><InstallPWAButton /><Button variant="ghost" size="icon" aria-label="Sair" onClick={async () => { await supabase.auth.signOut(); await navigate({ to: "/auth" }); }}><LogOut className="h-4 w-4" /></Button></div></header>
-    <PageTabs /><main className="space-y-7 py-6"><div><h2 className="finance-app-title text-2xl sm:text-3xl">Analisar fatura</h2><p className="mt-2 text-sm text-muted-foreground">Envie sua fatura e deixe a IA identificar os lançamentos para você.</p></div>
+    <main className="space-y-7 py-6"><div><h2 className="finance-app-title text-2xl sm:text-3xl">Analisar fatura</h2><p className="mt-2 text-sm text-muted-foreground">Envie sua fatura e deixe a IA identificar os lançamentos para você.</p></div>
     {error && <div role="alert" className="flex items-start gap-2 border-l-2 border-danger py-2 pl-3 text-sm text-danger"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span className="break-words">{error}</span></div>}
     {success && <section role="status" className="space-y-3 border-y border-border py-6"><h3 className="flex items-center gap-2 font-semibold text-primary"><Check className="h-5 w-5" />Importação concluída</h3><p className="text-sm">{success.imported} lançamentos importados · {success.skipped} duplicados ignorados.</p><Button asChild variant="outline"><Link to="/lancamentos">Ver lançamentos</Link></Button></section>}
     {!preview && <section className="space-y-4"><div onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); if (!busy) selectFile(e.dataTransfer.files[0]); }} className="flex min-h-56 flex-col items-center justify-center gap-4 rounded-lg border border-dashed border-border bg-card px-5 py-8 text-center"><Upload className="h-7 w-7 text-muted-foreground" /><div><h3 className="font-medium">Arraste sua fatura aqui</h3><p className="mt-1 text-xs text-muted-foreground">PDF, JPG, JPEG ou PNG · Até 20 MB</p></div><input ref={upload} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" aria-label="Selecionar fatura" onChange={e => { selectFile(e.target.files?.[0]); e.target.value = ""; }} /><Button variant="outline" disabled={busy} onClick={() => upload.current?.click()}>Selecionar arquivo</Button></div>
@@ -115,7 +110,7 @@ function InvoicePage() {
       <section aria-label="Composição da fatura" className="space-y-3 border-y border-border py-5"><div className="grid grid-cols-2 gap-4 sm:grid-cols-3">{[["Despesas pessoais efetivas", classified.personal], ["Correspondente à Bia", classified.bia], ["Reembolsável", classified.reimbursable]].map(([label, amount]) => <div key={String(label)}><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 font-medium">{classified.known ? money(Number(amount)) : "Valores pendentes"}</p></div>)}</div><p className="text-xs text-muted-foreground">Esta é apenas a composição da fatura. Os valores atribuídos à Bia ou reembolsáveis não são tratados como dívida, cobrança ou receita.</p></section>
       <InvoiceReview rows={rows} categories={preview.categories} onChange={updateRows} disabled={checking || saving} />
       <footer className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-sm font-medium">{selectedCount} selecionados · {money(selectedTotal)} integrais · Pessoal: {selectedPersonal.known ? money(selectedPersonal.personal) : "Pendente"}</p><p className="mt-1 text-xs text-muted-foreground">Não quitados · Apenas parcelas cobradas · Sem criar parcelas futuras</p></div><Button disabled={!selectedCount || checking || saving || !selectedPersonal.known || currency !== "BRL" || (!totals.matches && !ack)} onClick={prepareImport}>{checking ? "Verificando duplicidades…" : "Importar lançamentos"}</Button></footer></>}
-    </main></div><MobileNav />
+    </main></div>
     <Dialog open={confirmation !== null} onOpenChange={open => { if (!open && !saving) setConfirmation(null); }}><DialogContent onEscapeKeyDown={e => { if (saving) e.preventDefault(); }} onPointerDownOutside={e => { if (saving) e.preventDefault(); }}><DialogHeader><DialogTitle>Confirmar importação</DialogTitle><DialogDescription>Você está prestes a importar {confirmation?.result.count ?? 0} lançamentos.</DialogDescription></DialogHeader><div className="space-y-4"><p className="text-sm">Os lançamentos serão adicionados ao seu Month Check.</p><p className="text-sm">Impacto pessoal selecionado: {money(selectedPersonal.personal)}. Valores integrais preservados.</p>{confirmation?.result.duplicates.length ? <div className="space-y-3"><h4 className="flex items-center gap-2 text-sm font-semibold"><AlertTriangle className="h-4 w-4" />Possíveis duplicidades</h4><div className="max-h-56 space-y-3 overflow-y-auto">{confirmation.result.duplicates.map((d,i) => <div className="border-b border-border pb-2 text-xs" key={i}><p className="font-medium">{d.description} · {d.date} · {money(Number(d.value))}</p><p className="mt-1 text-muted-foreground">{d.reason} {d.exact ? "Não será importado novamente." : "Compare antes de confirmar."}</p></div>)}</div>{needsDuplicateAck && <label className="flex items-start gap-2 text-sm"><Checkbox checked={duplicatesAck} onCheckedChange={v => setDuplicatesAck(v === true)} /><span>Revisei as possíveis duplicidades e desejo importar as linhas não bloqueadas.</span></label>}</div> : null}{error && <p role="alert" className="text-sm text-danger">{error}</p>}</div><DialogFooter><Button variant="outline" disabled={saving} onClick={() => setConfirmation(null)}>Cancelar</Button><Button disabled={saving || !confirmation?.result.count || (needsDuplicateAck && !duplicatesAck)} onClick={confirmImport}>{saving ? "Importando…" : "Confirmar importação"}</Button></DialogFooter></DialogContent></Dialog>
   </div>;
 }
