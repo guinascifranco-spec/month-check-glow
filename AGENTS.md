@@ -12,3 +12,4 @@
 - Financial SQL-nullable RPC arguments use an explicit app-owned contract replacing overlapping generated function types on the existing authenticated client; this preserves SQL NULL semantics without editing generated types or creating another connection.
 - Bun unit tests run separately from the application compiler; this prevents Bun runtime declarations from changing the Worker's fetch types.
 - Investment cost metrics and charts share reversal record filtering; this prevents cancelled contributions from remaining in accumulated cost while retaining audit rows.
+- Authenticated pages share navigation through the pathless authenticated layout; this keeps sidebar state, active routes, mobile behavior, and sign-out consistent without duplicating page chrome.
