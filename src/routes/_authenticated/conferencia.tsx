@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -51,6 +51,7 @@ const MESES = [
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 function ConferenciaPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
