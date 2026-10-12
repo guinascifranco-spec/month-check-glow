@@ -103,7 +103,7 @@ function FutureViewPage() {
   }
 
   return (
-    <div className="finance-app min-h-screen px-4 pb-24 pt-4 sm:px-8 sm:py-6 lg:pb-8">
+    <div className="finance-app min-h-screen px-4 pb-8 pt-4 sm:px-8 sm:py-6 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         <p className="mb-6 text-sm text-muted-foreground">
           Projeção baseada nos dados financeiros registrados no Month Check.

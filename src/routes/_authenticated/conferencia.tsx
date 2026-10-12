@@ -185,7 +185,7 @@ function ConferenciaPage() {
   }
 
   return (
-    <div className="finance-app min-h-screen px-4 pb-24 pt-4 sm:px-8 sm:py-6 lg:pb-8">
+    <div className="finance-app min-h-screen px-4 pb-8 pt-4 sm:px-8 sm:py-6 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         <div className="mb-4 flex justify-end">
           <BackupButton />

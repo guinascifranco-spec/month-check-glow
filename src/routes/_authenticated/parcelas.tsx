@@ -198,7 +198,7 @@ function ParcelasPage() {
   const openEdit = (item: Installment) => { setEditing(item); setOpen(true); };
 
   return (
-    <div className="finance-app min-h-screen px-4 pb-24 pt-4 sm:px-8 sm:py-6 lg:pb-8">
+    <div className="finance-app min-h-screen px-4 pb-8 pt-4 sm:px-8 sm:py-6 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         {/* Limite mensal */}
         <section className="neu-raised mb-6 rounded-2xl p-4 sm:p-6">

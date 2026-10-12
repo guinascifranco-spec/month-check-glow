@@ -97,7 +97,7 @@ function InvoicePage() {
     finally { importLock.current = false; setSaving(false); }
   }
   const needsDuplicateAck = confirmation?.result.duplicates.some(d => !d.exact) ?? false;
-  return <div className="finance-app min-h-screen px-4 pb-24 pt-4 sm:px-8 sm:py-6 lg:pb-8"><div className="mx-auto max-w-6xl">
+  return <div className="finance-app min-h-screen px-4 pb-8 pt-4 sm:px-8 sm:py-6 lg:pb-8"><div className="mx-auto max-w-6xl">
     <main className="space-y-7 py-6"><div><h2 className="finance-app-title text-2xl sm:text-3xl">Analisar fatura</h2><p className="mt-2 text-sm text-muted-foreground">Envie sua fatura e deixe a IA identificar os lançamentos para você.</p></div>
     {error && <div role="alert" className="flex items-start gap-2 border-l-2 border-danger py-2 pl-3 text-sm text-danger"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span className="break-words">{error}</span></div>}
     {success && <section role="status" className="space-y-3 border-y border-border py-6"><h3 className="flex items-center gap-2 font-semibold text-primary"><Check className="h-5 w-5" />Importação concluída</h3><p className="text-sm">{success.imported} lançamentos importados · {success.skipped} duplicados ignorados.</p><Button asChild variant="outline"><Link to="/lancamentos">Ver lançamentos</Link></Button></section>}

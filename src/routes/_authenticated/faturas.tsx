@@ -274,7 +274,7 @@ function CreditCardsPage() {
   const unlinkedRows = useMemo(() => unlinkedQuery.data ?? [], [unlinkedQuery.data]);
 
   return (
-    <div className="min-h-screen px-4 pb-24 pt-4 sm:px-6 lg:pb-8">
+    <div className="min-h-screen px-4 pb-8 pt-4 sm:px-6 lg:pb-8">
       <div className="mx-auto max-w-6xl">
         <main className="space-y-6">
           <section className="flex flex-wrap items-end justify-between gap-4">

@@ -258,7 +258,7 @@ function BenefitsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 text-foreground lg:pb-0">
+    <div className="min-h-screen bg-background pb-8 text-foreground">
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
