@@ -1,13 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { LogOut, Plus, Trash2, AlertTriangle, History, Pencil } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { Logo } from "@/components/logo";
-import { InstallPWAButton } from "@/components/install-pwa-button";
-import { PageTabs } from "@/components/page-tabs";
-import { MobileNav } from "@/components/mobile-nav";
+import { Plus, Trash2, AlertTriangle, History, Pencil } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
@@ -91,7 +86,6 @@ function computeStatus(it: Installment) {
 }
 
 function ParcelasPage() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const fetchSettings = useServerFn(getSettings);
@@ -203,39 +197,9 @@ function ParcelasPage() {
   const openNew = () => { setEditing(null); setOpen(true); };
   const openEdit = (item: Installment) => { setEditing(item); setOpen(true); };
 
-  async function signOut() {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
-  }
-
   return (
     <div className="finance-app min-h-screen px-4 pb-24 pt-4 sm:px-8 sm:py-6 lg:pb-8">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <Logo height={40} />
-            <div className="min-w-0">
-              <h1 className="finance-app-title truncate text-xl sm:text-3xl">Month Check</h1>
-              <p className="text-sm text-muted-foreground">Gastos parcelados</p>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <InstallPWAButton />
-            <button
-              onClick={signOut}
-              className="neu-pressable inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground"
-            >
-              <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Sair</span>
-            </button>
-          </div>
-        </header>
-
-        <div className="mb-6">
-          <PageTabs />
-        </div>
-
         {/* Limite mensal */}
         <section className="neu-raised mb-6 rounded-2xl p-4 sm:p-6">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
@@ -428,7 +392,6 @@ function ParcelasPage() {
           setEditing(null);
         }}
       />
-      <MobileNav />
     </div>
   );
 }

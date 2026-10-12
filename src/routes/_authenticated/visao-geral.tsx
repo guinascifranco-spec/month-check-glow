@@ -1,8 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { LogOut } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -15,11 +14,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
-import { Logo } from "@/components/logo";
-import { InstallPWAButton } from "@/components/install-pwa-button";
-import { PageTabs } from "@/components/page-tabs";
-import { MobileNav } from "@/components/mobile-nav";
 import { Slider } from "@/components/ui/slider";
 import { getAccumulatedWithPatrimony } from "@/lib/shared-metrics.functions";
 import { formatFinancialCycleRange, getFinancialCycle } from "@/lib/financial-cycle";
@@ -81,9 +75,6 @@ const MES_ABBR = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set",
 const monthLabel = (y: number, m: number) => `${MES_ABBR[m - 1]}/${String(y).slice(-2)}`;
 
 function VisaoGeralPage() {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
   const fetchPatrimony = useServerFn(getAccumulatedWithPatrimony);
   const fetchAtivos = useServerFn(listAtivos);
   const fetchProventos = useServerFn(listProventos);
@@ -194,40 +185,9 @@ function VisaoGeralPage() {
 
   const ganhoProjetado = projData.finalValue - patrimonioTotal;
 
-  async function signOut() {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
-  }
-
   return (
     <div className="finance-app min-h-screen px-4 pb-24 pt-4 sm:px-8 sm:py-6 lg:pb-8">
       <div className="mx-auto max-w-6xl">
-        {/* Header */}
-        <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <Logo height={40} />
-            <div className="min-w-0">
-              <h1 className="finance-app-title truncate text-xl sm:text-3xl">Month Check</h1>
-              <p className="text-sm text-muted-foreground">Visão geral do patrimônio</p>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <InstallPWAButton />
-            <button
-              onClick={signOut}
-              className="neu-pressable inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground"
-            >
-              <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Sair</span>
-            </button>
-          </div>
-        </header>
-
-        <div className="mb-6">
-          <PageTabs />
-        </div>
-
         <section className="mb-8" aria-labelledby="flow-title">
           <h2 id="flow-title" className="text-lg font-bold">Fluxo financeiro</h2>
           <p className="mb-4 text-sm text-muted-foreground">
@@ -511,7 +471,6 @@ function VisaoGeralPage() {
           </div>}
         </section>
       </div>
-      <MobileNav />
     </div>
   );
 }
