@@ -2,12 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState, type FormEvent } from "react";
-import { LogOut, Plus, Wallet } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { Logo } from "@/components/logo";
-import { InstallPWAButton } from "@/components/install-pwa-button";
-import { PageTabs } from "@/components/page-tabs";
-import { MobileNav } from "@/components/mobile-nav";
+import { Plus, Wallet } from "lucide-react";
 import { FinancialReconciliationPanel } from "@/components/financial-reconciliation-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -263,26 +258,7 @@ function BenefitsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 text-foreground lg:pb-0">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-          <Logo />
-          <div className="flex items-center gap-2">
-            <InstallPWAButton />
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Sair"
-              onClick={() => void supabase.auth.signOut()}
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        <div className="mx-auto max-w-7xl px-4">
-          <PageTabs />
-        </div>
-      </header>
+    <div className="min-h-screen bg-background pb-8 text-foreground">
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -522,7 +498,6 @@ function BenefitsPage() {
           accounts={wallets.filter((item) => item.is_active)}
         />
       </main>
-      <MobileNav />
       <Dialog
         open={Boolean(draft)}
         onOpenChange={(open) => {

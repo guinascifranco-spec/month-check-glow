@@ -1,18 +1,13 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { CalendarDays, Check, Edit3, LogOut, Plus, Search, Tags, Trash2, TrendingDown, TrendingUp, Wallet, Wand2, Settings2 } from "lucide-react";
-import { Logo } from "@/components/logo";
-import { InstallPWAButton } from "@/components/install-pwa-button";
-import { MobileNav } from "@/components/mobile-nav";
-import { PageTabs } from "@/components/page-tabs";
+import { CalendarDays, Check, Edit3, Plus, Search, Tags, Trash2, TrendingDown, TrendingUp, Wallet, Wand2, Settings2 } from "lucide-react";
 import { CategoryBudget } from "@/components/category-budget";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import {
   createExpenseCategory,
   createTransaction,
@@ -87,7 +82,6 @@ function getSuggestedCategory(description: string, rules: Rule[]) {
 }
 
 function TransactionsPage() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fetchWorkspace = useServerFn(getTransactionWorkspace);
   const fetchMonthlySpending = useServerFn(getMonthlyCategorySpending);
@@ -225,18 +219,9 @@ function TransactionsPage() {
     setFormOpen(true);
   }
 
-  async function signOut() { await queryClient.cancelQueries(); queryClient.clear(); await supabase.auth.signOut(); navigate({ to: "/auth", replace: true }); }
-
   return (
-    <div className="finance-app min-h-screen px-4 pb-24 pt-4 sm:px-8 sm:py-6 lg:pb-8">
+    <div className="finance-app min-h-screen px-4 pb-8 pt-4 sm:px-8 sm:py-6 lg:pb-8">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:mb-8 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
-          <div className="flex min-w-0 items-center gap-3"><Logo height={40} /><div className="min-w-0"><h1 className="finance-app-title truncate text-xl sm:text-3xl">Month Check</h1><p className="truncate text-sm text-muted-foreground">Histórico Oficial (Lançamentos)</p></div></div>
-          <div className="flex items-center gap-2"><InstallPWAButton /><Button variant="ghost" onClick={signOut} className="neu-pressable min-h-11"><LogOut /><span className="hidden sm:inline">Sair</span></Button></div>
-        </header>
-        
-        <div className="mb-6"><PageTabs /></div>
-
         <section className="neu-raised mb-6 rounded-2xl p-4 sm:p-6">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <FilterField label="De"><Input type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></FilterField>
@@ -345,7 +330,6 @@ function TransactionsPage() {
       <CategoriesDialog open={categoryOpen} onOpenChange={setCategoryOpen} categories={categories} onCreate={async (name, colorKey) => { await createCategoryFn({ data: { name, colorKey } }); refresh(); }} onRename={async (id, name) => { await renameCategoryFn({ data: { id, name } }); refresh(); }} onDelete={async (id) => { await deleteCategoryFn({ data: { id } }); refresh(); }} />
       <RulesDialog open={rulesOpen} onOpenChange={setRulesOpen} rules={rules} categories={categories} categoryNames={categoryNames} onCreate={async (keyword, categoryId) => { await createRuleFn({ data: { keyword, categoryId } }); refresh(); }} onDelete={async (id) => { await deleteRuleFn({ data: { id } }); refresh(); }} />
       <ReviewDialog open={reviewOpen} onOpenChange={setReviewOpen} suggestions={suggestions} categoryNames={categoryNames} onApply={(updates) => applyRulesMutation.mutate(updates)} isApplying={applyRulesMutation.isPending} />
-      <MobileNav />
     </div>
   );
 }

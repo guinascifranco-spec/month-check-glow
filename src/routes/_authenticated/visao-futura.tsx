@@ -1,8 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { AlertTriangle, CalendarCheck, LogOut, TrendingDown, TrendingUp, WalletCards } from "lucide-react";
+import { AlertTriangle, CalendarCheck, TrendingDown, TrendingUp, WalletCards } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -18,11 +18,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Logo } from "@/components/logo";
-import { InstallPWAButton } from "@/components/install-pwa-button";
-import { MobileNav } from "@/components/mobile-nav";
-import { PageTabs } from "@/components/page-tabs";
-import { supabase } from "@/integrations/supabase/client";
 import { getFutureProjection } from "@/lib/future-view.functions";
 
 export const Route = createFileRoute("/_authenticated/visao-futura")({
@@ -75,8 +70,6 @@ function label(year: number, month: number) {
 }
 
 function FutureViewPage() {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const fetchProjection = useServerFn(getFutureProjection);
   const [horizon, setHorizon] = useState(6);
   const [custom, setCustom] = useState("");
@@ -109,34 +102,9 @@ function FutureViewPage() {
     if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 60) setHorizon(parsed);
   }
 
-  async function signOut() {
-    await queryClient.cancelQueries();
-    queryClient.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
-  }
-
   return (
-    <div className="finance-app min-h-screen px-4 pb-24 pt-4 sm:px-8 sm:py-6 lg:pb-8">
+    <div className="finance-app min-h-screen px-4 pb-8 pt-4 sm:px-8 sm:py-6 lg:pb-8">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:mb-8 sm:flex sm:flex-wrap sm:justify-between sm:gap-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <Logo height={40} />
-            <div className="min-w-0">
-              <h1 className="finance-app-title truncate text-xl sm:text-3xl">Month Check</h1>
-              <p className="truncate text-sm text-muted-foreground">Visão dos próximos meses</p>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <InstallPWAButton />
-            <button onClick={signOut} className="neu-pressable inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground">
-              <LogOut className="h-4 w-4" /><span className="hidden sm:inline">Sair</span>
-            </button>
-          </div>
-        </header>
-
-        <div className="mb-6"><PageTabs /></div>
-
         <p className="mb-6 text-sm text-muted-foreground">
           Projeção baseada nos dados financeiros registrados no Month Check.
           <span className="block">Usa até três ciclos com lançamentos reais para calcular a média histórica; parcelas e projeções futuras são exibidas por mês-calendário.</span>
@@ -237,7 +205,6 @@ function FutureViewPage() {
           </>
         )}
       </div>
-      <MobileNav />
     </div>
   );
 }

@@ -2,12 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState, type FormEvent } from "react";
-import { CreditCard, LogOut, Plus, ReceiptText } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { Logo } from "@/components/logo";
-import { InstallPWAButton } from "@/components/install-pwa-button";
-import { PageTabs } from "@/components/page-tabs";
-import { MobileNav } from "@/components/mobile-nav";
+import { CreditCard, Plus, ReceiptText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -279,30 +274,8 @@ function CreditCardsPage() {
   const unlinkedRows = useMemo(() => unlinkedQuery.data ?? [], [unlinkedQuery.data]);
 
   return (
-    <div className="min-h-screen px-4 pb-24 pt-4 sm:px-6 lg:pb-8">
+    <div className="min-h-screen px-4 pb-8 pt-4 sm:px-6 lg:pb-8">
       <div className="mx-auto max-w-6xl">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Logo height={40} />
-            <div>
-              <h1 className="finance-app-title text-2xl font-bold">Month Check</h1>
-              <p className="text-sm text-muted-foreground">Cartões e faturas</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <InstallPWAButton />
-            <button
-              onClick={() => void supabase.auth.signOut()}
-              className="neu-pressable inline-flex min-h-[44px] items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground"
-            >
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Sair</span>
-            </button>
-          </div>
-        </header>
-        <div className="mb-6">
-          <PageTabs />
-        </div>
         <main className="space-y-6">
           <section className="flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -737,7 +710,6 @@ function CreditCardsPage() {
           onSave={(input) => payMutation.mutate(input)}
         />
       )}
-      <MobileNav />
     </div>
   );
 }
