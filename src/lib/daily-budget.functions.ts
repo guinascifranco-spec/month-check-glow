@@ -16,7 +16,7 @@ export const getCalendarData = createServerFn({ method: "POST" })
     const { year, month } = cycleMonth(data.cycleStart);
     const [plan, inst, rows, prefs] = await Promise.all([
       supabase.from("checklist_items").select("tipo, expense_class, valor").eq("user_id", userId).eq("year", year).eq("month", month),
-      supabase.from("installments").select("first_date, installment_value, total_installments").eq("user_id", userId),
+      supabase.from("installments").select("first_date, installment_value, total_installments, kind").eq("user_id", userId),
       supabase
         .from("month_check_rows")
         .select("id, descricao, transaction_date, tipo, valor, expense_class, invoice_source, invoice_responsibility, invoice_personal_value, invoice_payment, invoice_installment_total")

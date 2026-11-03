@@ -13,7 +13,7 @@ export type BudgetRow = FinancialRow & {
 };
 
 export type PlanItem = { tipo: string; expense_class: string; valor: number };
-export type InstallmentPlan = { first_date: string; installment_value: number; total_installments: number };
+export type InstallmentPlan = { first_date: string; installment_value: number; total_installments: number; kind?: string | null };
 
 export type BudgetInput = {
   cycleStart: string; // inclusive, YYYY-MM-DD
@@ -53,6 +53,7 @@ export function installmentDueInMonth(item: InstallmentPlan, year: number, month
   const fy = Number(item.first_date.slice(0, 4));
   const fm = Number(item.first_date.slice(5, 7));
   const offset = (year - fy) * 12 + (month - fm);
+  if (item.kind === "assinatura") return offset >= 0 ? item.installment_value : 0;
   return offset >= 0 && offset < item.total_installments ? item.installment_value : 0;
 }
 
