@@ -90,3 +90,9 @@ test("projeção no ritmo atual", () => {
   const b = computeDailyBudget({ ...base, today: "2026-11-03", rows: [row("2026-11-02", 100), row("2026-11-03", 100)] });
   expect(b.totals.projectedEnd).toBe(0); // 800 - 100*8
 });
+
+test("dias futuros mostram o limite recomendado constante", () => {
+  const b = computeDailyBudget({ ...base, today: "2026-11-02", rows: [row("2026-11-02", 140)] });
+  expect(b.days[1].available).toBe(95.55);
+  expect(b.days[9].available).toBe(95.55);
+});

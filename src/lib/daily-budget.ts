@@ -89,12 +89,13 @@ export function computeDailyBudget(input: BudgetInput) {
 
   const days: BudgetDay[] = [];
   let spentBefore = 0;
+  let assumedFuture = 0;
   for (let i = 0; i < totalDays; i++) {
     const date = addDays(input.cycleStart, i);
     const rows = byDate.get(date) ?? [];
     const spent = rows.reduce((s, r) => s + variableSpend(r), 0);
     const remainingDays = totalDays - i;
-    const available = Math.max(0, Math.floor((variableBudget - spentBefore) / remainingDays));
+    const available = Math.max(0, Math.floor((variableBudget - spentBefore - assumedFuture) / remainingDays));
     const isFuture = date > input.today;
     let status: DayStatus = "future";
     if (!isFuture) {
@@ -105,6 +106,7 @@ export function computeDailyBudget(input: BudgetInput) {
     }
     days.push({ date, available: fromCents(available), spent: fromCents(spent), balance: fromCents(available - spent), status, rows });
     if (!isFuture) spentBefore += spent;
+    else assumedFuture += available; // future days assume the recommended limit is followed
   }
 
   const todayIdx = days.findIndex((d) => d.date === input.today);
