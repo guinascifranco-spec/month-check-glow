@@ -127,7 +127,8 @@ export function computeDailyBudget(input: BudgetInput) {
       spent: fromCents(spentTotal),
       remaining: fromCents(remaining),
       accumulated: fromCents(accumulated),
-      projectedEnd: fromCents(remaining), // if future days spend exactly the recommended limit
+      // Keeping the average daily spending so far for the remaining days.
+      projectedEnd: fromCents(elapsedDays > 0 ? remaining - Math.round((spentTotal / elapsedDays) * daysLeftAfterToday) : remaining),
       totalDays,
       daysLeftAfterToday,
       tomorrow: fromCents(tomorrow),

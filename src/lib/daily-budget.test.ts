@@ -85,3 +85,8 @@ describe("orçamento diário", () => {
     expect(b.totals.remaining).toBe(1000);
   });
 });
+
+test("projeção no ritmo atual", () => {
+  const b = computeDailyBudget({ ...base, today: "2026-11-03", rows: [row("2026-11-02", 100), row("2026-11-03", 100)] });
+  expect(b.totals.projectedEnd).toBe(0); // 800 - 100*8
+});

@@ -2,6 +2,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeftRight,
+  CalendarDays,
   ChartNoAxesCombined,
   CreditCard,
   Landmark,
@@ -38,6 +39,7 @@ const navigationGroups = [
     label: "Planejamento",
     items: [
       { to: "/conferencia", label: "Conferência", icon: ListChecks },
+      { to: "/calendario", label: "Calendário", icon: CalendarDays },
       { to: "/visao-geral", label: "Visão Geral", icon: ChartNoAxesCombined },
       { to: "/visao-futura", label: "Visão Futura", icon: Telescope },
     ],

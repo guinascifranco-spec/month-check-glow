@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAnalisarFaturaRouteImport } from './routes/_authenticated/analisar-fatura'
 import { Route as AuthenticatedBeneficiosRouteImport } from './routes/_authenticated/beneficios'
+import { Route as AuthenticatedCalendarioRouteImport } from './routes/_authenticated/calendario'
 import { Route as AuthenticatedConferenciaRouteImport } from './routes/_authenticated/conferencia'
 import { Route as AuthenticatedContasRouteImport } from './routes/_authenticated/contas'
 import { Route as AuthenticatedFaturasRouteImport } from './routes/_authenticated/faturas'
@@ -48,6 +49,11 @@ const AuthenticatedAnalisarFaturaRoute =
 const AuthenticatedBeneficiosRoute = AuthenticatedBeneficiosRouteImport.update({
   id: '/beneficios',
   path: '/beneficios',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCalendarioRoute = AuthenticatedCalendarioRouteImport.update({
+  id: '/calendario',
+  path: '/calendario',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedConferenciaRoute =
@@ -111,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/analisar-fatura': typeof AuthenticatedAnalisarFaturaRoute
   '/beneficios': typeof AuthenticatedBeneficiosRoute
+  '/calendario': typeof AuthenticatedCalendarioRoute
   '/conferencia': typeof AuthenticatedConferenciaRoute
   '/contas': typeof AuthenticatedContasRoute
   '/faturas': typeof AuthenticatedFaturasRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/analisar-fatura': typeof AuthenticatedAnalisarFaturaRoute
   '/beneficios': typeof AuthenticatedBeneficiosRoute
+  '/calendario': typeof AuthenticatedCalendarioRoute
   '/conferencia': typeof AuthenticatedConferenciaRoute
   '/contas': typeof AuthenticatedContasRoute
   '/faturas': typeof AuthenticatedFaturasRoute
@@ -145,6 +153,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/analisar-fatura': typeof AuthenticatedAnalisarFaturaRoute
   '/_authenticated/beneficios': typeof AuthenticatedBeneficiosRoute
+  '/_authenticated/calendario': typeof AuthenticatedCalendarioRoute
   '/_authenticated/conferencia': typeof AuthenticatedConferenciaRoute
   '/_authenticated/contas': typeof AuthenticatedContasRoute
   '/_authenticated/faturas': typeof AuthenticatedFaturasRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/analisar-fatura'
     | '/beneficios'
+    | '/calendario'
     | '/conferencia'
     | '/contas'
     | '/faturas'
@@ -179,6 +189,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/analisar-fatura'
     | '/beneficios'
+    | '/calendario'
     | '/conferencia'
     | '/contas'
     | '/faturas'
@@ -196,6 +207,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/analisar-fatura'
     | '/_authenticated/beneficios'
+    | '/_authenticated/calendario'
     | '/_authenticated/conferencia'
     | '/_authenticated/contas'
     | '/_authenticated/faturas'
@@ -250,6 +262,13 @@ declare module '@tanstack/react-router' {
       path: '/beneficios'
       fullPath: '/beneficios'
       preLoaderRoute: typeof AuthenticatedBeneficiosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/calendario': {
+      id: '/_authenticated/calendario'
+      path: '/calendario'
+      fullPath: '/calendario'
+      preLoaderRoute: typeof AuthenticatedCalendarioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/conferencia': {
@@ -328,6 +347,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAnalisarFaturaRoute: typeof AuthenticatedAnalisarFaturaRoute
   AuthenticatedBeneficiosRoute: typeof AuthenticatedBeneficiosRoute
+  AuthenticatedCalendarioRoute: typeof AuthenticatedCalendarioRoute
   AuthenticatedConferenciaRoute: typeof AuthenticatedConferenciaRoute
   AuthenticatedContasRoute: typeof AuthenticatedContasRoute
   AuthenticatedFaturasRoute: typeof AuthenticatedFaturasRoute
@@ -342,6 +362,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAnalisarFaturaRoute: AuthenticatedAnalisarFaturaRoute,
   AuthenticatedBeneficiosRoute: AuthenticatedBeneficiosRoute,
+  AuthenticatedCalendarioRoute: AuthenticatedCalendarioRoute,
   AuthenticatedConferenciaRoute: AuthenticatedConferenciaRoute,
   AuthenticatedContasRoute: AuthenticatedContasRoute,
   AuthenticatedFaturasRoute: AuthenticatedFaturasRoute,

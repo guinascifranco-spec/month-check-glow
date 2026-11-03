@@ -176,7 +176,7 @@ function CalendarPage() {
                   <Row label="Orçamento variável restante" value={brl(t.remaining)} strong neg={t.remaining < 0} />
                   <Row label={t.accumulated >= 0 ? "Economia acumulada" : "Excesso acumulado"} value={brl(Math.abs(t.accumulated))} neg={t.accumulated < 0} />
                   <Row label="Planejado por dia" value={brl(t.plannedPerDay)} />
-                  <Row label="Saldo projetado no fim (seguindo o limite)" value={brl(Math.max(0, t.projectedEnd) && 0)} />
+                  <Row label="Saldo projetado no fim (no ritmo atual)" value={brl(t.projectedEnd)} neg={t.projectedEnd < 0} />
                 </dl>
                 {t.deficit > 0 && (
                   <p className="mt-3 text-sm text-destructive">
