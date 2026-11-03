@@ -94,5 +94,6 @@ test("projeção no ritmo atual", () => {
 test("dias futuros mostram o limite recomendado constante", () => {
   const b = computeDailyBudget({ ...base, today: "2026-11-02", rows: [row("2026-11-02", 140)] });
   expect(b.days[1].available).toBe(95.55);
-  expect(b.days[9].available).toBe(95.55);
+  expect(b.days[8].available).toBe(95.55);
+  expect(b.days[9].available).toBe(95.56); // cent remainder lands on the last day
 });
