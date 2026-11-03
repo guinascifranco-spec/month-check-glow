@@ -18,11 +18,11 @@ const row = (date: string, valor: number, extra: Partial<BudgetRow> = {}): Budge
 });
 
 describe("orçamento diário", () => {
-  test("sem gastos: 100 por dia e amanhã 100", () => {
+  test("sem gastos: 100 por dia; sobra de hoje vai para amanhã", () => {
     const b = computeDailyBudget({ ...base, today: "2026-11-02", rows: [] });
     expect(b.totals.plannedPerDay).toBe(100);
     expect(b.today?.available).toBe(100);
-    expect(b.totals.tomorrow).toBe(100);
+    expect(b.totals.tomorrow).toBe(111.11);
   });
   test("excesso de 40 reduz os dias seguintes", () => {
     const b = computeDailyBudget({ ...base, today: "2026-11-02", rows: [row("2026-11-02", 140)] });
