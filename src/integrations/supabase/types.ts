@@ -151,6 +151,24 @@ export type Database = {
           },
         ]
       }
+      calendar_preferences: {
+        Row: {
+          reserved_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          reserved_amount?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          reserved_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       category_rules: {
         Row: {
           category_id: string
